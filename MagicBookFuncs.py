@@ -70,8 +70,10 @@ def IDToControlerName(ID):
     return 'MB_Ctrler_' + ID
 def controlerNameToID(controlerName):
     return controlerName[10:]
-def IDToBSName(BSID, ID):
-    return 'MB_'+BSID+ID
+def IDToBSName(ID):
+    return 'MB_BS_'+ID
+def BSIDToIndex(BSID):
+    return int(BSID[2:])
 # Create Rig
 def indexRange(maxIndex):
     return range(-1 * maxIndex, maxIndex + 1)
@@ -316,26 +318,38 @@ def createBSTarget(BSID, width, height, subDivWidth, subDivHeight):
 
 def conductBS(BSID,ID):
     pageName = IDToMeshName(ID)
-    BSName = IDToMeshName(BSID)
-    BSNodeName = IDToBSName(BSID,ID)
-    cmds.blendShape(BSName,pageName,name=BSNodeName)
-    skinCluster = IDToSkinClusterName(ID)
-    meshShapeNode = IDToMeshShapeNode(ID)
-    if cmds.objExists(skinCluster):
-        cmds.reorderDeformers(skinCluster,BSNodeName,meshShapeNode)
+    BSTargetName = IDToMeshName(BSID)
+    BSNodeName = IDToBSName(ID)
+    BSIndex = BSIDToIndex(BSID)
+
+    if not cmds.objExists(BSNodeName):
+        cmds.blendShape(BSTargetName,pageName,name=BSNodeName)
+        skinCluster = IDToSkinClusterName(ID)
+        meshShapeNode = IDToMeshShapeNode(ID)
+        if cmds.objExists(skinCluster):
+            try:
+                cmds.reorderDeformers(skinCluster, BSNodeName, meshShapeNode)
+            except:
+                pass
+    else:
+        cmds.blendShape(BSNodeName,edit=True,target=(pageName, BSIndex, BSTargetName, 1.0))
 
 def disableBS(BSID,ID):
-    BSNodeName = IDToBSName(BSID, ID)
+    BSNodeName = IDToBSName(ID)
     plugHandle = '.envelope'
     cmds.setAttr(BSNodeName+plugHandle,0)
 
 def enableBS(BSID,ID):
-    BSNodeName = IDToBSName(BSID, ID)
+    BSNodeName = IDToBSName(ID)
     plugHandle = '.envelope'
     cmds.setAttr(BSNodeName + plugHandle, 1)
 
 
 createGuides(width, height, subDivWidth, subDivHeight,cvsMaxIndex)
 createPage(ID, width, height, subDivWidth, subDivHeight,cvsMaxIndex)
+createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
+conductBS(BSID,ID)
+
+BSID='BS1'
 createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
 conductBS(BSID,ID)
