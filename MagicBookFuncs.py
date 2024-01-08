@@ -1,4 +1,5 @@
 import maya.cmds as cmds
+
 # Name
 def indexToID(index):
     if index >= 0:
@@ -72,11 +73,15 @@ def controlerNameToID(controlerName):
     return controlerName[10:]
 def IDToBSName(ID):
     return 'MB_BS_'+ID
+def IDToComputeCoreName():
+    return 'MB_CmptCore_'+ID
+
+
 def BSIDToIndex(BSID):
     return int(BSID[2:])
 # Create Rig
-def indexRange(maxIndex):
-    return range(-1 * maxIndex, maxIndex + 1)
+def indexRange(totalIndex):
+    return range(-1 * totalIndex, totalIndex + 1)
 def createGuideShader():
     #0-3给控制器,4-7给引导页
     ramp1 = [(29, 43, 83),(126, 37, 83),(255, 0, 77),(250, 239, 93),
@@ -102,7 +107,7 @@ def getJntPosList(width, subDivWidth):
         jntPosList.append(pos)
 
     return jntPosList
-def getCVsList(cvsMaxIndex, width):
+def getCVsPosList(cvsMaxIndex, width):
     cvsList = []
     interval = width / (cvsMaxIndex - 1)
 
@@ -137,6 +142,7 @@ def createRigTree():
     parentName = 'Main'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
+    cmds.setAttr('Geo.inheritsTransform',False)
 
     levelName = 'CtrlCenter'
     parentName = 'Main'
@@ -218,7 +224,7 @@ def createCVCurve(ID, width, cvsMaxIndex=4):
     cmds.select(clear=True)
     crvName = IDToCrvName(ID)
     deleteIfExist(crvName)
-    cvsList = getCVsList(cvsMaxIndex, width)
+    cvsList = getCVsPosList(cvsMaxIndex, width)
     cmds.curve(name=crvName, p=cvsList)
     cmds.parent(crvName, 'CurveGrp')
     children = cmds.listRelatives(crvName, children=True, fullPath=False)
@@ -241,7 +247,7 @@ def createControler(ID,width,cvsMaxIndex=4):
     controlerName = IDToControlerName(ID)
     curveName = IDToCrvName(ID)
     curveShapeName = IDToCrvShapeName(ID)
-    cvsList = getCVsList(cvsMaxIndex, width)
+    cvsList = getCVsPosList(cvsMaxIndex, width)
     for i in range(cvsMaxIndex):
         controlerName_suffix = controlerName+'_'+str(i)
         cmds.sphere(name=controlerName_suffix,radius=0.5,sections=1)
@@ -271,24 +277,8 @@ def createControler(ID,width,cvsMaxIndex=4):
         shaderName = f'MB_S_Ramp_{i}'
         cmds.hyperShade(assign=shaderName)
 
-
-# if __name__ == "__main__":
-totalIndex = 5
-width = 10
-height = 15
-subDivWidth = 5
-subDivHeight = 10
-index = 0
-ID = indexToID(index)
-cvsMaxIndex = 4
-BSID='BS0'
-
-cmds.file(new=True,force=True)
-createGuideShader()
-createRigTree()
-
 def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
-    IDs=['LL','LR','RL','RR']
+    IDs=['LL','LR','ML','MM','MR','RL','RR']
     for i in range(len(IDs)):
         shaderName = iToShaderName(4+i)
         ID = IDs[i]
@@ -334,22 +324,107 @@ def conductBS(BSID,ID):
     else:
         cmds.blendShape(BSNodeName,edit=True,target=(pageName, BSIndex, BSTargetName, 1.0))
 
-def disableBS(BSID,ID):
+def disableBS(ID):
     BSNodeName = IDToBSName(ID)
     plugHandle = '.envelope'
     cmds.setAttr(BSNodeName+plugHandle,0)
 
-def enableBS(BSID,ID):
+def enableBS(ID):
     BSNodeName = IDToBSName(ID)
     plugHandle = '.envelope'
     cmds.setAttr(BSNodeName + plugHandle, 1)
 
+def resetControler(ID,cvsMaxIndex,width):
+    cvsPosList = getCVsPosList(cvsMaxIndex, width)
+    for cvsIndex in range(len(cvsPosList)):
+        controler = IDToControlerName(ID)+'_'+str(cvsIndex)
+        cmds.setAttr(f'{controler}.tx',cvsPosList[cvsIndex][0])
+        cmds.setAttr(f'{controler}.ty', cvsPosList[cvsIndex][1])
 
+# 定义参数
+totalIndex = 5
+width = 10
+height = 15
+subDivWidth = 5
+subDivHeight = 10
+cvsMaxIndex = 4
+
+
+index = 0
+ID = indexToID(index)
+
+
+# 准备
+cmds.file(new=True,force=True)
+createGuideShader()
+createRigTree()
+
+# 创建引导
 createGuides(width, height, subDivWidth, subDivHeight,cvsMaxIndex)
+
+# 循环 创建MBPage
 createPage(ID, width, height, subDivWidth, subDivHeight,cvsMaxIndex)
+
+# 创建BS
+BSID='BS0'
 createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
+# 循环 应用BS
 conductBS(BSID,ID)
 
+# 创建BS
 BSID='BS1'
 createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
+# 循环 应用BS
 conductBS(BSID,ID)
+
+# 写一个计算点插值的函数
+def blendList(ratio, list0, list1):
+    outputList = []
+    for item0, item1 in zip(list0, list1):
+        cv = item0 * (1 - ratio) + item1 * ratio
+        outputList.append(cv)
+    return outputList
+
+
+def interpolation(ratio, cvsMaxIndex, list0, list1):
+    outputList = []
+    gap = 1.0 / cvsMaxIndex
+    print('gap:', gap)
+    section = int(ratio // gap)
+    print('section:', section)
+    if ratio == 1:
+        section = section - 1
+    ratio_fix = (ratio % gap) / gap
+    PCG0 = list0[section]
+    PCG1 = list1[section]
+
+    for item0, item1 in zip(PCG0, PCG1):
+        outputList.append(blendList(ratio_fix, item0, item1))
+    # output a list of pos look like:[[0,0],[1,1],[2,2],[3,3]]
+    return outputList
+
+
+list0 = [
+    [
+        (0, 0), (1, 0), (2, 0), (3, 0)
+    ], [
+        (1, 0), (1, 2), (0, 0), (0, 0)
+    ], [
+        (3, 0), (3, 0), (3, 0), (3, 0)
+    ], [
+        (0, 1), (0, 2), (0, 3), (0, 4)
+    ]
+]
+
+list1 = [
+    [
+        (1, 1), (1, 0), (0, 0), (0, 0)
+    ], [
+        (1, 0), (0, 3), (0, 4), (0, 2)
+    ], [
+        (1, 0), (1, 0), (0, 1), (0, 1)
+    ], [
+        (0, 4), (0, 4), (0, 2), (0, 2)
+    ]
+]
+print(interpolation(0.125, cvsMaxIndex, list0, list1))
