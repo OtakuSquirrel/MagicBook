@@ -17,6 +17,28 @@ def calculate_spline(x, x1, x2, y1, y2, dydx1=0, dydx2=0):
         y = y1
     return y
 
+def xspline(x, p1,p2):
+    x1 = p1[0]
+    y1 = p1[1]
+    x2 = p2[0]
+    y2 = p2[1]
+    h = x2 - x1
+    if h != 0:
+        a = (- 2 * (y2 - y1)) / (h ** 3)
+        b = (3 * (y2 - y1)) / (h ** 2)
+        d = y1
+        dx = x - x1
+        y = a * dx ** 3 + b * dx ** 2 + d
+    else:
+        y = y1
+    return y
+
+def sort_2d_array(arr):
+    if not arr:
+        return arr
+    sorted_arr = sorted(arr, key=lambda x: x[0])
+    return sorted_arr
+
 def interpolate_bezier(ratio, control_points):
     n = len(control_points) - 1
 
@@ -35,7 +57,6 @@ def interpolate_bezier(ratio, control_points):
     point = [sum(bernstein_poly(i, n, ratio) * coord for i, coord in enumerate(axis)) for axis in [x, y, z]]
 
     return tuple(point)
-
 
 def linear(x, x1, x2, y1, y2):
     y = y1 + (y2 - y1) * (x - x1) / (x2 - x1)
@@ -56,22 +77,11 @@ def findPos(x,columns):
     remainder = x-columns*quotient
     return quotient,remainder
 
-def has_none_value(arr):
-    if isinstance(arr, list):
-        for element in arr:
-            if has_none_value(element):
-                return True
-    else:
-        return arr is None
-
 def indexToListIndex(index, totalIndex):
     return index + totalIndex
 
-
-
 def listIndexToIndex(listIndex, totalIndex):
     return listIndex - totalIndex
-
 
 def blendList(ratio, list0, list1):
     outputList = []
@@ -103,6 +113,29 @@ def interpolation(ratio, PCGs0, PCGs1):
     # output a list of pos look like:[[0,0],[1,1],[2,2],[3,3]]
     return outputList
 
+def between_rows(x, matrix):
+    if not matrix or not matrix[0]:
+        return None
+
+    # 获取数组的第一列
+    first_column = [row[0] for row in matrix]
+
+    # 寻找x在第一列中的位置
+    index = 0
+    while index < len(first_column) and x > first_column[index]:
+        index += 1
+
+    # 处理边界情况
+    if index == 0:
+        # x在第一行之前，返回第一行和第二行
+        return matrix[0], matrix[1]
+    elif index == len(first_column):
+        # x在最后一行之后，返回倒数第二行和最后一行
+        return matrix[-2], matrix[-1]
+    else:
+        # x在两行之间，返回相邻的两行
+        return matrix[index - 1], matrix[index]
+
 REMAP_TYPE_ID = om.MTypeId(0x0007f7f1)
 
 
@@ -112,18 +145,12 @@ CMPTCORE_TYPE_ID = om.MTypeId(0x0007f7a4)
 class MBRemapNode(ommpx.MPxNode):
     TYPE_NAME = 'MBRemap'
     TYPE_ID = REMAP_TYPE_ID
-    x0 = None
-    x1 = None
-    x2 = None
-    x3 = None
-    y0 = None
-    y1 = None
-    y2 = None
-    y3 = None
-    projection = None
-    index = None
-
-
+    locator = None
+    totalLocator = None
+    totalIndex = None
+    remapValue = None
+    # test only
+    count = None
     # init
     def __init__(self):
         super().__init__()
@@ -136,112 +163,64 @@ class MBRemapNode(ommpx.MPxNode):
     def initialize(cls):
         numeric_attr = om.MFnNumericAttribute()
 
-        cls.x0 = numeric_attr.create('x0', 'x0', om.MFnNumericData.kFloat, 0.0)
+        #test only
+        cls.count = numeric_attr.create('count', 'c', om.MFnNumericData.kInt)
+        cls.addAttribute(cls.count)
+        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt,10)
         numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.y0 = numeric_attr.create('y0', 'y0', om.MFnNumericData.kFloat, 0.0)
+        numeric_attr.setMin(4)
+        cls.totalIndex = numeric_attr.create('totalIndex','tid',om.MFnNumericData.kInt,10)
         numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.x1 = numeric_attr.create('x1', 'x1', om.MFnNumericData.kFloat, 0.25)
-        numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.y1 = numeric_attr.create('y1', 'y1', om.MFnNumericData.kFloat, 0.0)
-        numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.x2 = numeric_attr.create('x2', 'x2', om.MFnNumericData.kFloat, 0.75)
-        numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.y2 = numeric_attr.create('y2', 'y2', om.MFnNumericData.kFloat, 1.0)
-        numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.x3 = numeric_attr.create('x3', 'x3', om.MFnNumericData.kFloat, 1.0)
-        numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.y3 = numeric_attr.create('y3', 'y3', om.MFnNumericData.kFloat, 1.0)
-        numeric_attr.setKeyable(True)
-        numeric_attr.setMin(0.0)
-        numeric_attr.setMax(1.0)
-        cls.addAttribute(cls.x0)
-        cls.addAttribute(cls.x1)
-        cls.addAttribute(cls.x2)
-        cls.addAttribute(cls.x3)
-        cls.addAttribute(cls.y0)
-        cls.addAttribute(cls.y1)
-        cls.addAttribute(cls.y2)
-        cls.addAttribute(cls.y3)
-
-
-
-        cls.index = numeric_attr.create('index', 'id', om.MFnNumericData.kFloat, 0.0)
+        numeric_attr.setMin(0)
+        cls.locator = numeric_attr.create('locator','l',om.MFnNumericData.k3Double)
         numeric_attr.setKeyable(True)
         numeric_attr.setArray(True)
-        numeric_attr.setReadable(True)
-        numeric_attr.setUsesArrayDataBuilder(True)
-        numeric_attr.setIndexMatters(False)
-        cls.addAttribute(cls.index)
-
-        cls.projection = numeric_attr.create('projection', 'prj', om.MFnNumericData.kFloat, 0.0)
-        # numeric_attr.setKeyable(True)!!!!!!!!!!!!!!!!!!NOT GOING TO WORK!!!!!!!!
-        # numeric_attr.setHidden(False)
+        cls.remapValue = numeric_attr.create('remapValue','v',om.MFnNumericData.kFloat)
         numeric_attr.setArray(True)
-        numeric_attr.setReadable(True)
-        numeric_attr.setWritable(False)
-        numeric_attr.setUsesArrayDataBuilder(True)
-        # numeric_attr.setIndexMatters(False)
-        cls.addAttribute(cls.projection)
 
-        # Affects
-        cls.attributeAffects(cls.index, cls.projection)
-        #
-        cls.attributeAffects(cls.x0, cls.projection)
-        cls.attributeAffects(cls.x1, cls.projection)
-        cls.attributeAffects(cls.x2, cls.projection)
-        cls.attributeAffects(cls.x3, cls.projection)
+        cls.addAttribute(cls.totalIndex)
+        cls.addAttribute(cls.locator)
+        cls.addAttribute(cls.remapValue)
+        cls.addAttribute(cls.totalLocator)
 
-        cls.attributeAffects(cls.y0, cls.projection)
-        cls.attributeAffects(cls.y1, cls.projection)
-        cls.attributeAffects(cls.y2, cls.projection)
-        cls.attributeAffects(cls.y3, cls.projection)
+        cls.attributeAffects(cls.totalIndex,cls.remapValue)
+        cls.attributeAffects(cls.locator,cls.remapValue)
+        cls.attributeAffects(cls.totalLocator,cls.remapValue)
+
+        # test only
+        cls.attributeAffects(cls.totalIndex, cls.count)
+        cls.attributeAffects(cls.locator, cls.count)
+        cls.attributeAffects(cls.totalLocator, cls.count)
+
+
 
     def compute(self, plug, data: om.MDataBlock):
-        indexArrayDataHandle = data.inputArrayValue(MBRemapNode.index)
-        totalIndex = indexArrayDataHandle.elementCount()
+        totalIndex = data.inputValue(self.totalIndex).asInt()
+        totalLocator = data.inputValue(self.totalLocator).asInt()
 
-        projectionArrayDataHandle = data.outputArrayValue(MBRemapNode.projection)
-        projectionArrayDataBuilder = projectionArrayDataHandle.builder()
+        locatorHandle = data.inputArrayValue(self.locator)
+        pointList = []
+        if locatorHandle.elementCount() >= totalLocator:
+            for i in range(totalLocator):
+                locatorHandle.jumpToArrayElement(i)
+                locatorPoint = locatorHandle.inputValue().asDouble3()
+                pointList.append(locatorPoint)
+        else:
+            return
+        pointList = sort_2d_array(pointList)
+        print('pointList:',pointList)
+        for index in range(-totalIndex,totalIndex+1):
+            x = (1.0*index/totalIndex)/2+0.5
+            print('x:',x)
+            p1,p2 = between_rows(x,pointList)
+            print('p1:', p1)
+            print('p2:', p2)
+            y = xspline(x, p1, p2)
 
-        x0 = data.inputValue(MBRemapNode.x0).asFloat()
-        x1 = data.inputValue(MBRemapNode.x1).asFloat()
-        x2 = data.inputValue(MBRemapNode.x2).asFloat()
-        x3 = data.inputValue(MBRemapNode.x3).asFloat()
-        y0 = data.inputValue(MBRemapNode.y0).asFloat()
-        y1 = data.inputValue(MBRemapNode.y1).asFloat()
-        y2 = data.inputValue(MBRemapNode.y2).asFloat()
-        y3 = data.inputValue(MBRemapNode.y3).asFloat()
+            print('y:',y)
+            print()
 
-        for i in range(totalIndex):
-            # get input
-            indexArrayDataHandle.jumpToElement(i)
-            x = indexArrayDataHandle.inputValue().asFloat()
-            # calculate
-            if (x >= x0 and x < x1):
-                y = calculate_spline(x, x0, x1, y0, y1)
-            elif (x >= x1 and x < x2):
-                y = calculate_spline(x, x1, x2, y1, y2)
-            else:
-                y = calculate_spline(x, x2, x3, y2, y3)
 
-            # output
-
-            projectionDataHandle = projectionArrayDataBuilder.addElement(i)
-            projectionDataHandle.setFloat(y)
 
         data.setClean(plug)
 
@@ -297,10 +276,6 @@ class MBCmptCoreNode(ommpx.MPxNode):
 
 
 
-        # test only
-        cls.oMessage = numeric_attr.create('oMessage','om',om.MFnNumericData.kInt,0)
-        cls.addAttribute(cls.oMessage)
-
         cls.iGuidePCG = numeric_attr.create('iGuidePCG', 'igpcg',om.MFnNumericData.k3Double)
         numeric_attr.setKeyable(True)
         numeric_attr.setArray(True)
@@ -327,21 +302,11 @@ class MBCmptCoreNode(ommpx.MPxNode):
         cls.attributeAffects(cls.index, cls.oPCG)
         cls.attributeAffects(cls.CVs, cls.oPCG)
 
-        # test only
-        cls.attributeAffects(cls.iGuidePCG, cls.oMessage)
-        cls.attributeAffects(cls.iMiddlePCG, cls.oMessage)
-        cls.attributeAffects(cls.ratio, cls.oMessage)
-        cls.attributeAffects(cls.totalIndex, cls.oMessage)
-        cls.attributeAffects(cls.totalMiddles, cls.oMessage)
-        cls.attributeAffects(cls.index, cls.oMessage)
-        cls.attributeAffects(cls.CVs, cls.oMessage)
 
 
 
     #
     def compute(self,plug,data: om.MDataBlock):
-        # test only
-        oMessage = data.outputValue(self.oMessage)
 
         #
         index = data.inputValue(self.index).asInt()
@@ -390,7 +355,6 @@ class MBCmptCoreNode(ommpx.MPxNode):
         middleCGP.insert(0, guideLCGP)
         middleCGP.append(guideRCGP)
 
-        print(middleCGP)
 
         middleCGP = transpose_matrix(middleCGP)
 
@@ -398,28 +362,13 @@ class MBCmptCoreNode(ommpx.MPxNode):
         #output
         oPCG_handle = data.outputArrayValue(MBCmptCoreNode.oPCG)
         oPCG_builder = oPCG_handle.builder()
-        # oPCG_builder.addElementArray(0).outputValue().set3Double(1,2,3)
-        # print(43)
-        # oPCG_handle.jumpToArrayElement(0)
-        # oPCG_handle.outputValue().set3Double(3,1,1)
-        # oPCGCount = oPCG_handle.elementCount()
-        # if(oPCGCount<CVs):
-        #     for i in range(CVs):
-        #         oPCG_builder.addElement(i).set3Double(0,0,0)
-        # print(oPCGCount)
-
         for i,pointList in enumerate(middleCGP):
             # interpolate point here
             point = interpolate_bezier(ratio,pointList)
             x = point[0]
             y = point[1]
-            print('x:',x)
-            print('y:',y)
             oPCG_builder.addElement(i).set3Double(x,y,0)
 
-
-        # test only
-        oMessage.setInt(guideCVsCount)
         data.setClean(plug)
 
 
