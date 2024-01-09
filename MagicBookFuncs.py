@@ -75,22 +75,19 @@ def IDToBSName(ID):
     return 'MB_BS_'+ID
 def IDToComputeCoreName():
     return 'MB_CmptCore_'+ID
-
-
+def indexToMiddleIDs(middleTotalIndex):
+    return [f'Mid{id}' for id in range(middleTotalIndex)]
 def BSIDToIndex(BSID):
     return int(BSID[2:])
 # Create Rig
 def indexRange(totalIndex):
     return range(-1 * totalIndex, totalIndex + 1)
-def createGuideShader():
-    #0-3给控制器,4-7给引导页
-    ramp1 = [(29, 43, 83),(126, 37, 83),(255, 0, 77),(250, 239, 93),
-             (54, 84, 134),(127, 199, 217),(255, 0, 77),(126, 37, 83)]
+def createMBShader(colorList):
     rampfix = []
-    for i in ramp1:
+    for i in colorList:
         tubfix = [x / 255 for x in i]
         rampfix.append(tubfix)
-    for index in range(len(ramp1)):
+    for index in range(len(colorList)):
         shaderBallName = f'MB_S_Ramp_{index}'
         deleteIfExist(shaderBallName)
         MB_S_Ramp = cmds.shadingNode('blinn',asShader=True,name = shaderBallName)
@@ -271,17 +268,46 @@ def createControler(ID,width,cvsMaxIndex=4):
         plugHandle = '.ty'
         dsPlugHandle = '.yValue'
         cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
+
         plugHandle = '.tz'
-        cmds.setAttr(controlerName_suffix + plugHandle,lock=True)
+        cmds.setAttr(controlerName_suffix + plugHandle,lock=True,keyable=False,channelBox=False)
+        plugHandle = '.rx'
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        plugHandle = '.ry'
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        plugHandle = '.rz'
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        plugHandle = '.sx'
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        plugHandle = '.sy'
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        plugHandle = '.sz'
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        plugHandle = '.v'
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
 
         shaderName = f'MB_S_Ramp_{i}'
         cmds.hyperShade(assign=shaderName)
 
 def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
-    IDs=['LL','LR','ML','MM','MR','RL','RR']
-    for i in range(len(IDs)):
+    GuideIDs=['LL','LR','RL','RR']
+    for i in range(len(GuideIDs)):
         shaderName = iToShaderName(4+i)
-        ID = IDs[i]
+        ID = GuideIDs[i]
+        createMesh(ID, width, height, subDivWidth, subDivHeight)
+        cmds.hyperShade(assign=shaderName)
+        createJointChain(ID, width, subDivWidth)
+        bindSkin(ID)
+        injectJntWeight(ID, subDivWidth, subDivHeight)
+        createCVCurve(ID, width, cvsMaxIndex)
+        createIKHandle(ID, subDivWidth)
+        createControler(ID,width,cvsMaxIndex)
+
+def createMiddles(middleTotalIndex,width, height, subDivWidth, subDivHeight, cvsMaxIndex):
+    MiddleIDs = indexToMiddleIDs(middleTotalIndex)
+    for i in range(len(MiddleIDs)):
+        shaderName = iToShaderName(4+i)
+        ID = MiddleIDs[i]
         createMesh(ID, width, height, subDivWidth, subDivHeight)
         cmds.hyperShade(assign=shaderName)
         createJointChain(ID, width, subDivWidth)
@@ -348,20 +374,21 @@ height = 15
 subDivWidth = 5
 subDivHeight = 10
 cvsMaxIndex = 4
-
-
+middleTotalIndex = 3
+shaderColorList = [(29, 43, 83),(126, 37, 83),(255, 0, 77),(250, 239, 93), (54, 84, 134),(127, 199, 217),(255, 0, 77),(126, 37, 83)]
 index = 0
 ID = indexToID(index)
 
 
 # 准备
 cmds.file(new=True,force=True)
-createGuideShader()
+createMBShader(shaderColorList)
 createRigTree()
 
 # 创建引导
 createGuides(width, height, subDivWidth, subDivHeight,cvsMaxIndex)
-
+# 创建中间页
+createMiddles(middleTotalIndex,width, height, subDivWidth, subDivHeight, cvsMaxIndex)
 # 循环 创建MBPage
 createPage(ID, width, height, subDivWidth, subDivHeight,cvsMaxIndex)
 
@@ -378,53 +405,4 @@ createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
 conductBS(BSID,ID)
 
 # 写一个计算点插值的函数
-def blendList(ratio, list0, list1):
-    outputList = []
-    for item0, item1 in zip(list0, list1):
-        cv = item0 * (1 - ratio) + item1 * ratio
-        outputList.append(cv)
-    return outputList
 
-
-def interpolation(ratio, cvsMaxIndex, list0, list1):
-    outputList = []
-    gap = 1.0 / cvsMaxIndex
-    print('gap:', gap)
-    section = int(ratio // gap)
-    print('section:', section)
-    if ratio == 1:
-        section = section - 1
-    ratio_fix = (ratio % gap) / gap
-    PCG0 = list0[section]
-    PCG1 = list1[section]
-
-    for item0, item1 in zip(PCG0, PCG1):
-        outputList.append(blendList(ratio_fix, item0, item1))
-    # output a list of pos look like:[[0,0],[1,1],[2,2],[3,3]]
-    return outputList
-
-
-list0 = [
-    [
-        (0, 0), (1, 0), (2, 0), (3, 0)
-    ], [
-        (1, 0), (1, 2), (0, 0), (0, 0)
-    ], [
-        (3, 0), (3, 0), (3, 0), (3, 0)
-    ], [
-        (0, 1), (0, 2), (0, 3), (0, 4)
-    ]
-]
-
-list1 = [
-    [
-        (1, 1), (1, 0), (0, 0), (0, 0)
-    ], [
-        (1, 0), (0, 3), (0, 4), (0, 2)
-    ], [
-        (1, 0), (1, 0), (0, 1), (0, 1)
-    ], [
-        (0, 4), (0, 4), (0, 2), (0, 2)
-    ]
-]
-print(interpolation(0.125, cvsMaxIndex, list0, list1))
