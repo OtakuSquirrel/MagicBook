@@ -17,48 +17,24 @@ def calculate_spline(x, x1, x2, y1, y2, dydx1=0, dydx2=0):
         y = y1
     return y
 
-def catmull_rom_interpolation(p0, p1, p2, p3, t):
-    """
-    Catmull-Rom 插值函数
-    """
-    return (
-        0.5 * ((2 * p1) +
-               (-p0 + p2) * t +
-               (2 * p0 - 5 * p1 + 4 * p2 - p3) * t**2 +
-               (-p0 + 3 * p1 - 3 * p2 + p3) * t**3)
-    )
+def interpolate_bezier(ratio, control_points):
+    n = len(control_points) - 1
 
-def interpolate_point(ratio, point_list):
-    """
-    使用 Catmull-Rom 样条曲线插值计算指定比例下的点
-    """
-    num_points = len(point_list)
-    if num_points < 4:
-        raise ValueError("需要至少4个点来执行 Catmull-Rom 插值。")
+    def binomial_coefficient(i, n):
+        """计算二项式系数"""
+        from math import factorial
+        return factorial(n) // (factorial(i) * factorial(n - i))
 
-    # 确保 ratio 在 0 到 1 之间
-    ratio = max(0.0, min(ratio, 1.0))
+    def bernstein_poly(i, n, t):
+        """计算Bernstein多项式"""
+        return binomial_coefficient(i, n) * (1 - t)**(n - i) * t**i
 
-    # 计算 ratio 对应的索引
-    t = ratio * (num_points - 1)
+    x, y, _ = zip(*control_points)
+    z = [0] * (n + 1)
 
-    # 获取四个相邻的点
-    i0 = int(t)
-    i1 = min(i0 + 1, num_points - 1)
-    i2 = min(i0 + 2, num_points - 1)
-    i3 = min(i0 + 3, num_points - 1)
+    point = [sum(bernstein_poly(i, n, ratio) * coord for i, coord in enumerate(axis)) for axis in [x, y, z]]
 
-    # 获取相邻的四个点
-    p0 = point_list[i0]
-    p1 = point_list[i1]
-    p2 = point_list[i2]
-    p3 = point_list[i3]
-
-    # 计算插值
-    interpolated_point = catmull_rom_interpolation(p0, p1, p2, p3, t - i0)
-
-    return interpolated_point
-
+    return tuple(point)
 
 
 def linear(x, x1, x2, y1, y2):
@@ -315,6 +291,8 @@ class MBCmptCoreNode(ommpx.MPxNode):
 
         cls.ratio = numeric_attr.create('ratio', 'r', om.MFnNumericData.kDouble, 0.5)
         numeric_attr.setKeyable(True)
+        numeric_attr.setMin(0)
+        numeric_attr.setMax(1)
         cls.addAttribute(cls.ratio)
 
 
@@ -340,17 +318,21 @@ class MBCmptCoreNode(ommpx.MPxNode):
         numeric_attr.setUsesArrayDataBuilder(True)
         cls.addAttribute(cls.oPCG)
 
+
         cls.attributeAffects(cls.iGuidePCG, cls.oPCG)
         cls.attributeAffects(cls.iMiddlePCG, cls.oPCG)
         cls.attributeAffects(cls.ratio, cls.oPCG)
         cls.attributeAffects(cls.totalIndex, cls.oPCG)
+        cls.attributeAffects(cls.totalMiddles, cls.oPCG)
         cls.attributeAffects(cls.index, cls.oPCG)
+        cls.attributeAffects(cls.CVs, cls.oPCG)
 
         # test only
         cls.attributeAffects(cls.iGuidePCG, cls.oMessage)
         cls.attributeAffects(cls.iMiddlePCG, cls.oMessage)
         cls.attributeAffects(cls.ratio, cls.oMessage)
         cls.attributeAffects(cls.totalIndex, cls.oMessage)
+        cls.attributeAffects(cls.totalMiddles, cls.oMessage)
         cls.attributeAffects(cls.index, cls.oMessage)
         cls.attributeAffects(cls.CVs, cls.oMessage)
 
@@ -394,7 +376,7 @@ class MBCmptCoreNode(ommpx.MPxNode):
             return
 
         middleCVsCount = iMiddlePCG.elementCount()
-        if middleCVsCount == totalMiddles * CVs:
+        if middleCVsCount >= totalMiddles * CVs:
             rows = totalMiddles
             middleCGP = [[None] * columns for _ in range(rows)]
             for i in range(totalMiddles * CVs):
@@ -412,8 +394,28 @@ class MBCmptCoreNode(ommpx.MPxNode):
 
         middleCGP = transpose_matrix(middleCGP)
 
-        finalCGP = []
-        for pointList in middleCGP:
+
+        #output
+        oPCG_handle = data.outputArrayValue(MBCmptCoreNode.oPCG)
+        oPCG_builder = oPCG_handle.builder()
+        # oPCG_builder.addElementArray(0).outputValue().set3Double(1,2,3)
+        # print(43)
+        # oPCG_handle.jumpToArrayElement(0)
+        # oPCG_handle.outputValue().set3Double(3,1,1)
+        # oPCGCount = oPCG_handle.elementCount()
+        # if(oPCGCount<CVs):
+        #     for i in range(CVs):
+        #         oPCG_builder.addElement(i).set3Double(0,0,0)
+        # print(oPCGCount)
+
+        for i,pointList in enumerate(middleCGP):
+            # interpolate point here
+            point = interpolate_bezier(ratio,pointList)
+            x = point[0]
+            y = point[1]
+            print('x:',x)
+            print('y:',y)
+            oPCG_builder.addElement(i).set3Double(x,y,0)
 
 
         # test only
