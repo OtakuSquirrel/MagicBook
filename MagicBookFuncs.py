@@ -1,5 +1,6 @@
 import maya.cmds as cmds
 
+
 # Name
 def indexToID(index):
     if index >= 0:
@@ -7,83 +8,151 @@ def indexToID(index):
     else:
         ID = 'N' + str(abs(index))
     return ID
+
+
 def IDToIndex(ID):
     if ID[0] == 'P':
         index = int(ID[1:])
-    elif ID[0]== 'N':
+    elif ID[0] == 'N':
         index = -1 * int(ID[1:])
     else:
         return 0
     return index
+
+
 def iToShaderName(i):
     return f'MB_S_Ramp_{i}'
+
+
 def indexToMeshName(index):
     meshName = 'MB_Mesh_' + indexToID(index)
     return meshName
+
+
 def IDToMeshName(ID):
-    meshName =  'MB_Mesh_' + ID
+    meshName = 'MB_Mesh_' + ID
     return meshName
+
+
 def IDToMeshShapeNode(ID):
-    return 'MB_Mesh_' + ID +'Shape'
+    return 'MB_Mesh_' + ID + 'Shape'
+
+
 def meshNameToIndex(meshName):
     ID = meshName[8:]
     index = IDToIndex(ID)
     return index
+
+
 def meshNameToID(meshName):
     return meshName[8:]
+
+
 def indexToJntName(index):
     return 'MB_Jnt_' + indexToID(index)
+
+
 def IDToJntName(ID):
     return 'MB_Jnt_' + ID
+
+
 def jntNameToIndex(jntName):
     return IDToIndex(jntName[8:])
+
+
 def jntNameToID(jntName):
     return jntName[8:]
+
+
 def addSuffix(name, i):
     return name + '_' + str(i)
+
+
 def indexToSkinClusterName(index):
     return 'MB_SkinCluster_' + indexToID(index)
+
+
 def IDToSkinClusterName(ID):
     return 'MB_SkinCluster_' + ID
+
+
 def skinClusterNameToIndex(skinClusterName):
     return IDToIndex(skinClusterName[15:])
+
+
 def skinClusterNameToID(skinClusterName):
     return skinClusterName[15:]
+
+
 def indexToCrvName(index):
     return 'MB_Crv_' + indexToID(index)
+
+
 def IDToCrvName(ID):
     return 'MB_Crv_' + ID
+
+
 def IDToCrvShapeName(ID):
     return 'MB_Crv_Shape_' + ID
+
+
 def crvNameToIndex(crvName):
     return IDToIndex(crvName[8:])
+
+
 def crvNameToID(crvName):
     return crvName[8:]
+
+
 def indexToIKHandleName(index):
     return 'MB_IKHandle_' + indexToID(index)
+
+
 def IDToIKHandleName(ID):
     return 'MB_IKHandle_' + ID
+
+
 def IKHandleNameToIndex(ikhandleName):
     return IDToIndex(ikhandleName[12:])
+
+
 def IKHandleNameToID(ikhandleName):
     return ikhandleName[12:]
+
+
 def IDToControlerName(ID):
     return 'MB_Ctrlor_' + ID
+
+
 def controlerNameToID(controlerName):
     return controlerName[10:]
+
+
 def IDToBSName(ID):
-    return 'MB_BS_'+ID
-def IDToComputeCoreName(ID):
-    return 'MB_CmptCore_'+ID
+    return 'MB_BS_' + ID
+
+
+def IDToCmptCore(ID):
+    return 'MB_CmptCore_' + ID
+
+
 def indexToMiddleIDs(totalMiddles):
     return [f'Mid{id}' for id in range(totalMiddles)]
+
+
 def BSIDToIndex(BSID):
     return int(BSID[2:])
+
+
+def IDToPointOnCurve(ID):
+    return 'MB_PointOnCurve_' + ID
 
 
 # Create Rig
 def indexRange(totalIndex):
     return range(-1 * totalIndex, totalIndex + 1)
+
+
 def createMBShader(colorList):
     rampfix = []
     for i in colorList:
@@ -92,12 +161,16 @@ def createMBShader(colorList):
     for index in range(len(colorList)):
         shaderBallName = f'MB_S_Ramp_{index}'
         deleteIfExist(shaderBallName)
-        MB_S_Ramp = cmds.shadingNode('blinn',asShader=True,name = shaderBallName)
-        cmds.setAttr(MB_S_Ramp+'.color',rampfix[index][0],rampfix[index][1],rampfix[index][2],type='double3')
-        cmds.setAttr(MB_S_Ramp + '.transparency', 0.3, 0.3,0.3, type='double3')
+        MB_S_Ramp = cmds.shadingNode('blinn', asShader=True, name=shaderBallName)
+        cmds.setAttr(MB_S_Ramp + '.color', rampfix[index][0], rampfix[index][1], rampfix[index][2], type='double3')
+        cmds.setAttr(MB_S_Ramp + '.transparency', 0.3, 0.3, 0.3, type='double3')
+
+
 def deleteIfExist(name):
     if cmds.objExists(name):
         cmds.delete(name)
+
+
 def getJntPosList(width, subDivWidth):
     jntPosList = []
     for i in range(subDivWidth + 1):
@@ -106,6 +179,8 @@ def getJntPosList(width, subDivWidth):
         jntPosList.append(pos)
 
     return jntPosList
+
+
 def getCVsPosList(cvsMaxIndex, width):
     cvsList = []
     interval = width / (cvsMaxIndex - 1)
@@ -116,15 +191,9 @@ def getCVsPosList(cvsMaxIndex, width):
         cvsList.append(pos)
 
     return cvsList
+
+
 def createRigTree():
-    # MagicBookGrp
-    # Main
-    # CtrlCenter
-    # DeformationSystem
-    # CurveGrp
-    # IKHandleGrp
-    # JntGrp
-    # Geo
     cmds.select(clear=True)
     levelName = 'MagicBookGrp'
     parentName = None
@@ -135,13 +204,14 @@ def createRigTree():
     parentName = 'MagicBookGrp'
     deleteIfExist(levelName)
     cmds.circle(n=levelName, normal=[0, 1, 0], radius=5)
+    # cmds.addAttr()
     cmds.parent(levelName, parentName)
 
-    levelName = 'Geo'
+    levelName = 'PageGeo'
     parentName = 'Main'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
-    cmds.setAttr('Geo.inheritsTransform',False)
+    cmds.setAttr('PageGeo.inheritsTransform', False)
 
     levelName = 'GuideGeo'
     parentName = 'Main'
@@ -159,7 +229,12 @@ def createRigTree():
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
-    levelName = 'CurveGrp'
+    levelName = 'PagesCurveGrp'
+    parentName = 'DeformationSystem'
+    deleteIfExist(levelName)
+    cmds.createNode('transform', n=levelName, p=parentName)
+
+    levelName = 'GuideCurveGrp'
     parentName = 'DeformationSystem'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
@@ -182,6 +257,12 @@ def createRigTree():
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('BSGrp.v', False)
 
+    levelName = 'BookSpine'
+    parentName = 'DeformationSystem'
+    deleteIfExist(levelName)
+    cmds.createNode('transform', n=levelName, p=parentName)
+
+
 def createMesh(ID, width, height, subDivWidth, subDivHeight):
     cmds.select(clear=True)
     meshName = IDToMeshName(ID)
@@ -195,7 +276,10 @@ def createMesh(ID, width, height, subDivWidth, subDivHeight):
     cmds.setAttr(meshName + plugHandle, 90)
     cmds.makeIdentity(mesh, apply=True, rotate=True, scale=True, translate=True)
     cmds.delete(constructionHistory=True)
-    cmds.parent(meshName, 'Geo')
+
+    cmds.parent(meshName, 'PageGeo')
+
+
 def createJointChain(ID, width, subDivWidth):
     cmds.select('JntGrp')
     jntName = IDToJntName(ID)
@@ -205,6 +289,8 @@ def createJointChain(ID, width, subDivWidth):
         jntPos = jntPosList[jntIndex]
         deleteIfExist(jntNameSuffix)
         cmds.joint(n=jntNameSuffix, p=jntPos, radius=0.1)
+
+
 def bindSkin(ID):
     meshName = IDToMeshName(ID)
     jntName = IDToJntName(ID)
@@ -215,6 +301,14 @@ def bindSkin(ID):
         return
     deleteIfExist(skinClusterName)
     cmds.skinCluster(jntName, meshName, name=skinClusterName)
+    cmds.setAttr(f'{meshName}.tx', lock=False)
+    cmds.setAttr(f'{meshName}.ty', lock=False)
+    cmds.setAttr(f'{meshName}.tz', lock=False)
+    cmds.setAttr(f'{meshName}.sx', lock=False)
+    cmds.setAttr(f'{meshName}.sy', lock=False)
+    cmds.setAttr(f'{meshName}.sz', lock=False)
+
+
 def injectJntWeight(ID, subDivWidth, subDivHeight):
     skinClusterName = IDToSkinClusterName(ID)
     weightListHandle = '.weightList'
@@ -229,17 +323,21 @@ def injectJntWeight(ID, subDivWidth, subDivHeight):
                 cmds.setAttr(attributeName, 1.0)
             else:
                 cmds.setAttr(attributeName, 0.0)
+
+
 def createCVCurve(ID, width, cvsMaxIndex=4):
     cmds.select(clear=True)
     crvName = IDToCrvName(ID)
     deleteIfExist(crvName)
     cvsList = getCVsPosList(cvsMaxIndex, width)
     cmds.curve(name=crvName, p=cvsList)
-    cmds.parent(crvName, 'CurveGrp')
+    cmds.parent(crvName, 'PagesCurveGrp')
     children = cmds.listRelatives(crvName, children=True, fullPath=False)
     crvShapeName = IDToCrvShapeName(ID)
-    cmds.rename(children[0],crvShapeName)
+    cmds.rename(children[0], crvShapeName)
     cmds.hide(crvShapeName)
+
+
 def createIKHandle(ID, subDivWidth):
     cmds.select(clear=True)
     ikHandleName = IDToIKHandleName(ID)
@@ -249,19 +347,21 @@ def createIKHandle(ID, subDivWidth):
     jointEnd = addSuffix(jointName, subDivWidth)
     deleteIfExist(ikHandleName)
     cmds.ikHandle(name=ikHandleName, startJoint=jointStart, endEffector=jointEnd, createCurve=False,
-                  curve=curveName, solver='ikSplineSolver',parentCurve=False)
+                  curve=curveName, solver='ikSplineSolver', parentCurve=False)
     cmds.parent(ikHandleName, 'IKHandleGrp')
     cmds.hide(ikHandleName)
-def createControler(ID,width,cvsMaxIndex=4):
+
+
+def createControler(ID, width, cvsMaxIndex=4):
     controlerName = IDToControlerName(ID)
     curveName = IDToCrvName(ID)
     curveShapeName = IDToCrvShapeName(ID)
     cvsList = getCVsPosList(cvsMaxIndex, width)
     for i in range(cvsMaxIndex):
-        controlerName_suffix = controlerName+'_'+str(i)
-        cmds.sphere(name=controlerName_suffix,radius=0.5,sections=1)
+        controlerName_suffix = controlerName + '_' + str(i)
+        cmds.sphere(name=controlerName_suffix, radius=0.5, sections=1)
         plugHandle = '.tx'
-        cmds.setAttr(controlerName_suffix+plugHandle,cvsList[i][0])
+        cmds.setAttr(controlerName_suffix + plugHandle, cvsList[i][0])
         plugHandle = '.ty'
         cmds.setAttr(controlerName_suffix + plugHandle, cvsList[i][1])
         plugHandle = '.tz'
@@ -269,20 +369,20 @@ def createControler(ID,width,cvsMaxIndex=4):
         plugHandle = '.rz'
         cmds.setAttr(controlerName_suffix + plugHandle, 90)
         cmds.makeIdentity(controlerName_suffix, apply=True, rotate=True, scale=True, translate=False)
-        cmds.parent(controlerName_suffix,curveName)
+        cmds.parent(controlerName_suffix, curveName)
         cmds.delete(constructionHistory=True)
         shapeNodePlug = f'.controlPoints[{i}]'
 
         plugHandle = '.tx'
         dsPlugHandle = '.xValue'
-        cmds.connectAttr(controlerName_suffix+plugHandle,curveShapeName+shapeNodePlug+dsPlugHandle)
+        cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
 
         plugHandle = '.ty'
         dsPlugHandle = '.yValue'
         cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
 
         plugHandle = '.tz'
-        cmds.setAttr(controlerName_suffix + plugHandle,lock=True)
+        cmds.setAttr(controlerName_suffix + plugHandle, lock=True)
         plugHandle = '.rx'
         cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
         plugHandle = '.ry'
@@ -301,11 +401,12 @@ def createControler(ID,width,cvsMaxIndex=4):
         shaderName = f'MB_S_Ramp_{i}'
         cmds.hyperShade(assign=shaderName)
 
+
 def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
-    guideIDs=['LL','LR','RL','RR']
+    guideIDs = ['LL', 'LR', 'RL', 'RR']
 
     for i in range(len(guideIDs)):
-        if i<2:
+        if i < 2:
             shaderName = iToShaderName(4)
         else:
             shaderName = iToShaderName(5)
@@ -317,14 +418,16 @@ def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
         bindSkin(ID)
         injectJntWeight(ID, subDivWidth, subDivHeight)
         createCVCurve(ID, width, cvsMaxIndex)
+        crvName = IDToCrvName(ID)
+        cmds.parent(crvName,'GuideCurveGrp')
         createIKHandle(ID, subDivWidth)
-        createControler(ID,width,cvsMaxIndex)
+        createControler(ID, width, cvsMaxIndex)
+
 
 def createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
     MiddleIDs = indexToMiddleIDs(totalMiddles)
     shaderName = iToShaderName(6)
     for i in range(len(MiddleIDs)):
-
         ID = MiddleIDs[i]
         createMesh(ID, width, height, subDivWidth, subDivHeight)
         cmds.parent(IDToMeshName(ID), 'GuideGeo')
@@ -334,31 +437,33 @@ def createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMax
         injectJntWeight(ID, subDivWidth, subDivHeight)
         createCVCurve(ID, width, cvsMaxIndex)
         createIKHandle(ID, subDivWidth)
-        createControler(ID,width,cvsMaxIndex)
+        createControler(ID, width, cvsMaxIndex)
 
-def createPage(ID, width, height, subDivWidth, subDivHeight,cvsMaxIndex):
+
+def createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
     createMesh(ID, width, height, subDivWidth, subDivHeight)
     createJointChain(ID, width, subDivWidth)
     bindSkin(ID)
     injectJntWeight(ID, subDivWidth, subDivHeight)
     createCVCurve(ID, width, cvsMaxIndex)
     createIKHandle(ID, subDivWidth)
-    createControler(ID,width,cvsMaxIndex)
+    createControler(ID, width, cvsMaxIndex)
+
 
 def createBSTarget(BSID, width, height, subDivWidth, subDivHeight):
     createMesh(BSID, width, height, subDivWidth, subDivHeight)
     BSName = IDToMeshName(BSID)
-    cmds.parent(BSName,'BSGrp')
+    cmds.parent(BSName, 'BSGrp')
 
 
-def conductBS(BSID,ID):
+def conductBS(BSID, ID):
     pageName = IDToMeshName(ID)
     BSTargetName = IDToMeshName(BSID)
     BSNodeName = IDToBSName(ID)
     BSIndex = BSIDToIndex(BSID)
 
     if not cmds.objExists(BSNodeName):
-        cmds.blendShape(BSTargetName,pageName,name=BSNodeName)
+        cmds.blendShape(BSTargetName, pageName, name=BSNodeName)
         skinCluster = IDToSkinClusterName(ID)
         meshShapeNode = IDToMeshShapeNode(ID)
         if cmds.objExists(skinCluster):
@@ -367,106 +472,71 @@ def conductBS(BSID,ID):
             except:
                 pass
     else:
-        cmds.blendShape(BSNodeName,edit=True,target=(pageName, BSIndex, BSTargetName, 1.0))
+        cmds.blendShape(BSNodeName, edit=True, target=(pageName, BSIndex, BSTargetName, 1.0))
+
 
 def disableBS(ID):
     BSNodeName = IDToBSName(ID)
     plugHandle = '.envelope'
-    cmds.setAttr(BSNodeName+plugHandle,0)
+    cmds.setAttr(BSNodeName + plugHandle, 0)
+
 
 def enableBS(ID):
     BSNodeName = IDToBSName(ID)
     plugHandle = '.envelope'
     cmds.setAttr(BSNodeName + plugHandle, 1)
 
-def resetControler(ID,cvsMaxIndex,width):
+
+def resetControler(ID, cvsMaxIndex, width):
     cvsPosList = getCVsPosList(cvsMaxIndex, width)
     for cvsIndex in range(len(cvsPosList)):
-        controler = IDToControlerName(ID)+'_'+str(cvsIndex)
-        cmds.setAttr(f'{controler}.tx',cvsPosList[cvsIndex][0])
+        controler = IDToControlerName(ID) + '_' + str(cvsIndex)
+        cmds.setAttr(f'{controler}.tx', cvsPosList[cvsIndex][0])
         cmds.setAttr(f'{controler}.ty', cvsPosList[cvsIndex][1])
 
-# 定义参数
-totalIndex = 10
-width = 10
-height = 15
-subDivWidth = 5
-subDivHeight = 10
-cvsMaxIndex = 4
-totalMiddles = 3
-shaderColorList = [(29, 43, 83),(126, 37, 83),
-                   (255, 0, 77),(250, 239, 93),
-                   (54, 84, 134),(255, 0, 77),(250, 239, 93),
-                   (255, 0, 77),(126, 37, 83)]
-index = 0
-ID = indexToID(index)
 
-
-# 准备
-cmds.file(new=True,force=True)
-createMBShader(shaderColorList)
-createRigTree()
-
-# 创建引导
-createGuides(width, height, subDivWidth, subDivHeight,cvsMaxIndex)
-# 创建中间页
-createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
-# 循环 创建MBPage
-createPage(ID, width, height, subDivWidth, subDivHeight,cvsMaxIndex)
-
-# 创建BS
-BSID='BS0'
-createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
-# 循环 应用BS
-conductBS(BSID,ID)
-
-# 创建BS
-BSID='BS1'
-createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
-# 循环 应用BS
-conductBS(BSID,ID)
-# 自动引导
+# 自动引导 test only
 def autoGuides():
-    cmds.setAttr('MB_Ctrlor_LL_0.tx',0)
-    cmds.setAttr('MB_Ctrlor_LL_0.ty',0)
-    cmds.setAttr('MB_Ctrlor_LL_1.tx',-2)
-    cmds.setAttr('MB_Ctrlor_LL_1.ty',1)
-    cmds.setAttr('MB_Ctrlor_LL_2.tx',-6)
-    cmds.setAttr('MB_Ctrlor_LL_2.ty',1)
-    cmds.setAttr('MB_Ctrlor_LL_3.tx',-10)
-    cmds.setAttr('MB_Ctrlor_LL_3.ty',0)
+    cmds.setAttr('MB_Ctrlor_LL_0.tx', 0)
+    cmds.setAttr('MB_Ctrlor_LL_0.ty', 0)
+    cmds.setAttr('MB_Ctrlor_LL_1.tx', -2)
+    cmds.setAttr('MB_Ctrlor_LL_1.ty', 1)
+    cmds.setAttr('MB_Ctrlor_LL_2.tx', -6)
+    cmds.setAttr('MB_Ctrlor_LL_2.ty', 1)
+    cmds.setAttr('MB_Ctrlor_LL_3.tx', -10)
+    cmds.setAttr('MB_Ctrlor_LL_3.ty', 0)
 
-    cmds.setAttr('MB_Ctrlor_LR_0.tx',0)
-    cmds.setAttr('MB_Ctrlor_LR_0.ty',0)
-    cmds.setAttr('MB_Ctrlor_LR_1.tx',-1)
-    cmds.setAttr('MB_Ctrlor_LR_1.ty',2)
-    cmds.setAttr('MB_Ctrlor_LR_2.tx',-4)
-    cmds.setAttr('MB_Ctrlor_LR_2.ty',3)
-    cmds.setAttr('MB_Ctrlor_LR_3.tx',-9)
-    cmds.setAttr('MB_Ctrlor_LR_3.ty',1)
+    cmds.setAttr('MB_Ctrlor_LR_0.tx', 0)
+    cmds.setAttr('MB_Ctrlor_LR_0.ty', 0)
+    cmds.setAttr('MB_Ctrlor_LR_1.tx', -1)
+    cmds.setAttr('MB_Ctrlor_LR_1.ty', 2)
+    cmds.setAttr('MB_Ctrlor_LR_2.tx', -4)
+    cmds.setAttr('MB_Ctrlor_LR_2.ty', 3)
+    cmds.setAttr('MB_Ctrlor_LR_3.tx', -9)
+    cmds.setAttr('MB_Ctrlor_LR_3.ty', 1)
 
-    cmds.setAttr('MB_Ctrlor_RL_0.tx',0)
-    cmds.setAttr('MB_Ctrlor_RL_0.ty',0)
-    cmds.setAttr('MB_Ctrlor_RL_1.tx',1)
-    cmds.setAttr('MB_Ctrlor_RL_1.ty',2)
-    cmds.setAttr('MB_Ctrlor_RL_2.tx',4)
-    cmds.setAttr('MB_Ctrlor_RL_2.ty',3)
-    cmds.setAttr('MB_Ctrlor_RL_3.tx',9)
-    cmds.setAttr('MB_Ctrlor_RL_3.ty',1)
+    cmds.setAttr('MB_Ctrlor_RL_0.tx', 0)
+    cmds.setAttr('MB_Ctrlor_RL_0.ty', 0)
+    cmds.setAttr('MB_Ctrlor_RL_1.tx', 1)
+    cmds.setAttr('MB_Ctrlor_RL_1.ty', 2)
+    cmds.setAttr('MB_Ctrlor_RL_2.tx', 4)
+    cmds.setAttr('MB_Ctrlor_RL_2.ty', 3)
+    cmds.setAttr('MB_Ctrlor_RL_3.tx', 9)
+    cmds.setAttr('MB_Ctrlor_RL_3.ty', 1)
 
-    cmds.setAttr('MB_Ctrlor_RR_0.tx',0)
-    cmds.setAttr('MB_Ctrlor_RR_0.ty',0)
-    cmds.setAttr('MB_Ctrlor_RR_1.tx',2)
-    cmds.setAttr('MB_Ctrlor_RR_1.ty',1)
-    cmds.setAttr('MB_Ctrlor_RR_2.tx',6)
-    cmds.setAttr('MB_Ctrlor_RR_2.ty',1)
-    cmds.setAttr('MB_Ctrlor_RR_3.tx',10)
-    cmds.setAttr('MB_Ctrlor_RR_3.ty',0)
-# 自动中间页
-autoGuides()
+    cmds.setAttr('MB_Ctrlor_RR_0.tx', 0)
+    cmds.setAttr('MB_Ctrlor_RR_0.ty', 0)
+    cmds.setAttr('MB_Ctrlor_RR_1.tx', 2)
+    cmds.setAttr('MB_Ctrlor_RR_1.ty', 1)
+    cmds.setAttr('MB_Ctrlor_RR_2.tx', 6)
+    cmds.setAttr('MB_Ctrlor_RR_2.ty', 1)
+    cmds.setAttr('MB_Ctrlor_RR_3.tx', 10)
+    cmds.setAttr('MB_Ctrlor_RR_3.ty', 0)
+
+
 def autoMiddles():
-    cmds.setAttr('MB_Ctrlor_Mid0_0.tx',0)
-    cmds.setAttr('MB_Ctrlor_Mid0_0.ty',0)
+    cmds.setAttr('MB_Ctrlor_Mid0_0.tx', 0)
+    cmds.setAttr('MB_Ctrlor_Mid0_0.ty', 0)
     cmds.setAttr('MB_Ctrlor_Mid0_1.tx', -2)
     cmds.setAttr('MB_Ctrlor_Mid0_1.ty', 3)
     cmds.setAttr('MB_Ctrlor_Mid0_2.tx', -5)
@@ -482,26 +552,26 @@ def autoMiddles():
     cmds.setAttr('MB_Ctrlor_Mid2_2.ty', 5)
     cmds.setAttr('MB_Ctrlor_Mid2_3.tx', 6)
     cmds.setAttr('MB_Ctrlor_Mid2_3.ty', 8)
-autoMiddles()
 
-def createCmptCore(index,totalIndex,totalMiddles,cvsMaxIndex):
+
+def createCmptCore(index, totalIndex, totalMiddles, cvsMaxIndex):
     ID = indexToID(index)
     guideIDs = ['LL', 'LR', 'RL', 'RR']
-    cmptCoreName = IDToComputeCoreName(ID)
-    MBCmptCore = cmds.createNode('MBCmptCore',name=cmptCoreName)
-    cmds.setAttr(f'{MBCmptCore}.cvs',cvsMaxIndex)
+    cmptCoreName = IDToCmptCore(ID)
+    MBCmptCore = cmds.createNode('MBCmptCore', name=cmptCoreName)
+    cmds.setAttr(f'{MBCmptCore}.cvs', cvsMaxIndex)
     cmds.setAttr(f'{MBCmptCore}.index', index)
     cmds.setAttr(f'{MBCmptCore}.totalMiddles', totalMiddles)
     cmds.setAttr(f'{MBCmptCore}.totalIndex', totalIndex)
 
-    for i,guideID in enumerate(guideIDs):
+    for i, guideID in enumerate(guideIDs):
         guideCtrlor = IDToControlerName(guideID)
         for j in range(cvsMaxIndex):
-            t = cvsMaxIndex*i+j
-            cmds.connectAttr(f'{guideCtrlor}_{j}.translate',f'{cmptCoreName}.iGuidePCG[{t}]')
+            t = cvsMaxIndex * i + j
+            cmds.connectAttr(f'{guideCtrlor}_{j}.translate', f'{cmptCoreName}.iGuidePCG[{t}]')
 
     MiddleIDs = indexToMiddleIDs(totalMiddles)
-    for i,middleID in enumerate(MiddleIDs):
+    for i, middleID in enumerate(MiddleIDs):
         middleCtrlor = IDToControlerName(middleID)
         for j in range(cvsMaxIndex):
             t = cvsMaxIndex * i + j
@@ -509,10 +579,103 @@ def createCmptCore(index,totalIndex,totalMiddles,cvsMaxIndex):
 
     pageCtrlor = IDToControlerName(ID)
     for i in range(cvsMaxIndex):
-        pageCtrlorsuffix = addSuffix(pageCtrlor,i)
-        cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]',f'{pageCtrlorsuffix}.translate')
-
-createCmptCore(0,totalIndex,totalMiddles,cvsMaxIndex)
+        pageCtrlorsuffix = addSuffix(pageCtrlor, i)
+        cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]', f'{pageCtrlorsuffix}.translate')
 
 
+def createBookSpineCurve():
+    bookSpineCurve = 'MB_BookSpine_Curve'
+    deleteIfExist(bookSpineCurve)
+    bookSpineCurve = cmds.curve(name=bookSpineCurve, p=[[-1, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0]])
+    cmds.parent(bookSpineCurve, 'BookSpine')
+    children = cmds.listRelatives(bookSpineCurve, children=True, fullPath=False)
+    bookSpineCurveShapeName = 'MB_BookSpine_Curve_Shape'
+    cmds.rename(children[0], bookSpineCurveShapeName)
+    for i in range(4):
+        jointName = f'MB_BookSpline_CV_{i}'
+        deleteIfExist(jointName)
+        joint = cmds.createNode('joint', name=jointName)
+        cmds.setAttr(f'{joint}.tz', lock=True)
+        cmds.setAttr(f'{joint}.rx', keyable=False)
+        cmds.setAttr(f'{joint}.rz', keyable=False)
+        cmds.setAttr(f'{joint}.ry', keyable=False)
+        cmds.setAttr(f'{joint}.sx', keyable=False)
+        cmds.setAttr(f'{joint}.sz', keyable=False)
+        cmds.setAttr(f'{joint}.sy', keyable=False)
+        cmds.parent(joint, 'BookSpine')
+        cmds.connectAttr(f'{joint}.translate', f'{bookSpineCurveShapeName}.controlPoints[{i}]')
+
+
+def createPointOnCurveNode(index):
+    ID = indexToID(index)
+    spineCurve = 'MB_BookSpine_Curve'
+    cmptCore = IDToCmptCore(ID)
+    controlCrv = IDToCrvName(ID)
+    pointOnCurveName = IDToPointOnCurve(ID)
+    deleteIfExist(pointOnCurveName)
+    pointOnCurve = cmds.createNode('pointOnCurveInfo', n=pointOnCurveName)
+    cmds.connectAttr(f'{spineCurve}.local', f'{pointOnCurve}.inputCurve')
+    cmds.connectAttr(f'{cmptCore}.pp', f'{pointOnCurve}.parameter')
+    cmds.connectAttr(f'{pointOnCurve}.result.position', f'{controlCrv}.translate')
+
+
+# 定义参数
+totalIndex = 10
+width = 10
+height = 15
+subDivWidth = 5
+subDivHeight = 10
+cvsMaxIndex = 4
+totalMiddles = 3
+shaderColorList = [(29, 43, 83), (126, 37, 83),
+                   (255, 0, 77), (250, 239, 93),
+                   (54, 84, 134), (255, 0, 77), (250, 239, 93),
+                   (255, 0, 77), (126, 37, 83)]
+
+
+
+# 准备
+cmds.file(new=True, force=True)
+createMBShader(shaderColorList)
+createRigTree()
+
+# 创建引导
+createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex)
+# 创建中间页
+createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
+# 循环 创建MBPage
+for iindex in range(-totalIndex, totalIndex + 1):
+    ID = indexToID(iindex)
+    createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
+
+# 创建BS
+BSID = 'BS0'
+createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
+# 循环 应用BS
+for iindex in range(-totalIndex, totalIndex + 1):
+    ID = indexToID(iindex)
+    conductBS(BSID, ID)
+
+# # 创建BS
+# BSID = 'BS1'
+# createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
+# # 循环 应用BS
+# conductBS(BSID, ID)
+
+# 自动中间页
+autoGuides()
+
+autoMiddles()
+# 循环 创建MB计算核心
+for iindex in range(-totalIndex, totalIndex + 1):
+    ID = indexToID(iindex)
+    createCmptCore(iindex, totalIndex, totalMiddles, cvsMaxIndex)
+
+# 创建书脊
+createBookSpineCurve()
+
+# 循环 创建点在线上，偏移书页
+for iindex in range(-totalIndex, totalIndex + 1):
+    ID = indexToID(iindex)
+    createPointOnCurveNode(iindex)
 

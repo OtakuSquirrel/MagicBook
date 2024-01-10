@@ -6,7 +6,8 @@ import math
 from scipy.interpolate import CubicSpline
 import numpy as np
 
-def xspline(x, p1,p2):
+
+def xspline(x, p1, p2):
     x1 = p1[0]
     y1 = p1[1]
     x2 = p2[0]
@@ -53,20 +54,24 @@ def transpose_matrix(matrix):
     """
     return [list(row) for row in zip(*matrix)]
 
-def findPos(x,columns):
+
+def findPos(x, columns):
     if columns:
-        t = x/columns
+        t = x / columns
     else:
         t = 0
     quotient = math.floor(t)
-    remainder = x-columns*quotient
-    return quotient,remainder
+    remainder = x - columns * quotient
+    return quotient, remainder
+
 
 def indexToListIndex(index, totalIndex):
     return index + totalIndex
 
+
 def listIndexToIndex(listIndex, totalIndex):
     return listIndex - totalIndex
+
 
 def blendList(ratio, list0, list1):
     outputList = []
@@ -75,12 +80,14 @@ def blendList(ratio, list0, list1):
         outputList.append(cv)
     return outputList
 
-def blendListList(ratio,listList0,listList1):
+
+def blendListList(ratio, listList0, listList1):
     outputList = []
-    for list0,list1 in zip(listList0, listList1):
-        midList = blendList(ratio,list0,list1)
+    for list0, list1 in zip(listList0, listList1):
+        midList = blendList(ratio, list0, list1)
         outputList.append(midList)
     return outputList
+
 
 def interpolation(ratio, PCGs0, PCGs1):
     outputList = []
@@ -97,6 +104,7 @@ def interpolation(ratio, PCGs0, PCGs1):
         outputList.append(blendList(ratio_fix, item0, item1))
     # output a list of pos look like:[[0,0],[1,1],[2,2],[3,3]]
     return outputList
+
 
 def between_rows(x, matrix):
     if not matrix or not matrix[0]:
@@ -121,8 +129,8 @@ def between_rows(x, matrix):
         # x在两行之间，返回相邻的两行
         return matrix[index - 1], matrix[index]
 
-REMAP_TYPE_ID = om.MTypeId(0x0007f7f9)
 
+REMAP_TYPE_ID = om.MTypeId(0x0007f7f9)
 
 CMPTCORE_TYPE_ID = om.MTypeId(0x0007f7a4)
 
@@ -136,6 +144,7 @@ class MBRemapNode(ommpx.MPxNode):
     remapValue = None
     # test only
     count = None
+
     # init
     def __init__(self):
         super().__init__()
@@ -148,21 +157,20 @@ class MBRemapNode(ommpx.MPxNode):
     def initialize(cls):
         numeric_attr = om.MFnNumericAttribute()
 
-        #test only
+        # test only
         cls.count = numeric_attr.create('count', 'c', om.MFnNumericData.kInt)
         cls.addAttribute(cls.count)
-        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt,4)
+        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt, 4)
         numeric_attr.setKeyable(True)
         numeric_attr.setMin(4)
-        cls.totalIndex = numeric_attr.create('totalIndex','tid',om.MFnNumericData.kInt,10)
+        cls.totalIndex = numeric_attr.create('totalIndex', 'tid', om.MFnNumericData.kInt, 10)
         numeric_attr.setKeyable(True)
         numeric_attr.setMin(0)
-        cls.locator = numeric_attr.create('locator','l',om.MFnNumericData.k3Double)
+        cls.locator = numeric_attr.create('locator', 'l', om.MFnNumericData.k3Double)
         numeric_attr.setKeyable(True)
         numeric_attr.setArray(True)
 
-
-        cls.remapValue = numeric_attr.create('remapValue','v',om.MFnNumericData.kFloat)
+        cls.remapValue = numeric_attr.create('remapValue', 'v', om.MFnNumericData.kFloat)
         numeric_attr.setArray(True)
         numeric_attr.setUsesArrayDataBuilder(True)
 
@@ -171,17 +179,14 @@ class MBRemapNode(ommpx.MPxNode):
         cls.addAttribute(cls.locator)
         cls.addAttribute(cls.remapValue)
 
-
-        cls.attributeAffects(cls.totalIndex,cls.remapValue)
-        cls.attributeAffects(cls.locator,cls.remapValue)
-        cls.attributeAffects(cls.totalLocator,cls.remapValue)
+        cls.attributeAffects(cls.totalIndex, cls.remapValue)
+        cls.attributeAffects(cls.locator, cls.remapValue)
+        cls.attributeAffects(cls.totalLocator, cls.remapValue)
 
         # test only
         cls.attributeAffects(cls.totalIndex, cls.count)
         cls.attributeAffects(cls.locator, cls.count)
         cls.attributeAffects(cls.totalLocator, cls.count)
-
-
 
     def compute(self, plug, data: om.MDataBlock):
 
@@ -201,16 +206,15 @@ class MBRemapNode(ommpx.MPxNode):
                 return
             pointList = sort_2d_array(pointList)
 
+            for index in range(-totalIndex, totalIndex + 1):
+                x = (1.0 * index / totalIndex) / 2 + 0.5
 
-            for index in range(-totalIndex,totalIndex+1):
-                x = (1.0*index/totalIndex)/2+0.5
-
-                p1,p2 = between_rows(x,pointList)
+                p1, p2 = between_rows(x, pointList)
 
                 y = xspline(x, p1, p2)
 
-                #output
-                listIndex = indexToListIndex(index,totalIndex)
+                # output
+                listIndex = indexToListIndex(index, totalIndex)
                 remapValue_builder.addElement(listIndex).setFloat(y)
 
             remapValue_handle.setAllClean()
@@ -228,7 +232,7 @@ class MBCmptCoreNode(ommpx.MPxNode):
     totalIndex = None
     index = None
     ratio = None
-
+    posParam = None
     # OUTPUT
     oPCG = None
     oMessage = None
@@ -260,15 +264,16 @@ class MBCmptCoreNode(ommpx.MPxNode):
         numeric_attr.setKeyable(True)
         cls.addAttribute(cls.index)
 
+        cls.posParam = numeric_attr.create('posParam', 'pp', om.MFnNumericData.kFloat, 0)
+        cls.addAttribute(cls.posParam)
+
         cls.ratio = numeric_attr.create('ratio', 'r', om.MFnNumericData.kDouble, 0.5)
         numeric_attr.setKeyable(True)
         numeric_attr.setMin(0)
         numeric_attr.setMax(1)
         cls.addAttribute(cls.ratio)
 
-
-
-        cls.iGuidePCG = numeric_attr.create('iGuidePCG', 'igpcg',om.MFnNumericData.k3Double)
+        cls.iGuidePCG = numeric_attr.create('iGuidePCG', 'igpcg', om.MFnNumericData.k3Double)
         numeric_attr.setKeyable(True)
         numeric_attr.setArray(True)
         cls.addAttribute(cls.iGuidePCG)
@@ -283,7 +288,6 @@ class MBCmptCoreNode(ommpx.MPxNode):
         numeric_attr.setUsesArrayDataBuilder(True)
         cls.addAttribute(cls.oPCG)
 
-
         cls.attributeAffects(cls.iGuidePCG, cls.oPCG)
         cls.attributeAffects(cls.iMiddlePCG, cls.oPCG)
         cls.attributeAffects(cls.ratio, cls.oPCG)
@@ -292,11 +296,19 @@ class MBCmptCoreNode(ommpx.MPxNode):
         cls.attributeAffects(cls.index, cls.oPCG)
         cls.attributeAffects(cls.CVs, cls.oPCG)
 
-
-
+        cls.attributeAffects(cls.index, cls.posParam)
+        cls.attributeAffects(cls.totalIndex, cls.posParam)
 
     #
-    def compute(self,plug,data: om.MDataBlock):
+    def compute(self, plug, data: om.MDataBlock):
+
+        if plug == self.posParam:
+            index = data.inputValue(self.index).asInt()
+            totalIndex = data.inputValue(self.totalIndex).asInt()
+            posParam = data.outputValue(self.posParam)
+            value = index / totalIndex / 2 + 0.5
+            posParam.setFloat(value)
+            data.setClean(plug)
 
         if plug == self.oPCG:
             index = data.inputValue(self.index).asInt()
@@ -310,7 +322,7 @@ class MBCmptCoreNode(ommpx.MPxNode):
             #
             limitRatio = 0.5
             if totalIndex != 0:
-                limitRatio = (1.0*index/totalIndex)/2+0.5
+                limitRatio = (1.0 * index / totalIndex) / 2 + 0.5
             #
             columns = CVs
             rows = 4
@@ -324,7 +336,7 @@ class MBCmptCoreNode(ommpx.MPxNode):
                     currentValue = iGuidePCG.inputValue().asDouble3()
                     guideCGP[row][column] = list(currentValue)
 
-                guideLCGP = blendListList(limitRatio,guideCGP[0],guideCGP[1])
+                guideLCGP = blendListList(limitRatio, guideCGP[0], guideCGP[1])
                 guideRCGP = blendListList(limitRatio, guideCGP[2], guideCGP[3])
 
             else:
@@ -343,27 +355,23 @@ class MBCmptCoreNode(ommpx.MPxNode):
             else:
                 return
 
-
             middleCGP.insert(0, guideLCGP)
             middleCGP.append(guideRCGP)
 
             middleCGP = transpose_matrix(middleCGP)
 
-
-            #output
+            # output
             oPCG_handle = data.outputArrayValue(MBCmptCoreNode.oPCG)
             oPCG_builder = oPCG_handle.builder()
-            for i,pointList in enumerate(middleCGP):
-
+            for i, pointList in enumerate(middleCGP):
                 # interpolate point here
-                point = interpolate(ratio,pointList)
+                point = interpolate(ratio, pointList)
 
                 x = point[0]
                 y = point[1]
-                oPCG_builder.addElement(i).set3Double(x,y,0)
+                oPCG_builder.addElement(i).set3Double(x, y, 0)
             oPCG_handle.setAllClean()
             data.setClean(plug)
-
 
 
 def initializePlugin(plugin):
@@ -391,6 +399,7 @@ def initializePlugin(plugin):
         om.MGlobal.displayInfo("initialized:{0}".format(MBCmptCoreNode.TYPE_NAME))
     except:
         om.MGlobal.displayInfo("fail to initialize:{0}".format(MBCmptCoreNode.TYPE_NAME))
+
 
 def uninitializePlugin(plugin):
     plugin_fn = ommpx.MFnPlugin(plugin)
