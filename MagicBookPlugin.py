@@ -136,7 +136,7 @@ def between_rows(x, matrix):
         # x在两行之间，返回相邻的两行
         return matrix[index - 1], matrix[index]
 
-REMAP_TYPE_ID = om.MTypeId(0x0007f7f1)
+REMAP_TYPE_ID = om.MTypeId(0x0007f7f9)
 
 
 CMPTCORE_TYPE_ID = om.MTypeId(0x0007f7a4)
@@ -166,7 +166,7 @@ class MBRemapNode(ommpx.MPxNode):
         #test only
         cls.count = numeric_attr.create('count', 'c', om.MFnNumericData.kInt)
         cls.addAttribute(cls.count)
-        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt,10)
+        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt,4)
         numeric_attr.setKeyable(True)
         numeric_attr.setMin(4)
         cls.totalIndex = numeric_attr.create('totalIndex','tid',om.MFnNumericData.kInt,10)
@@ -175,13 +175,17 @@ class MBRemapNode(ommpx.MPxNode):
         cls.locator = numeric_attr.create('locator','l',om.MFnNumericData.k3Double)
         numeric_attr.setKeyable(True)
         numeric_attr.setArray(True)
+
+
         cls.remapValue = numeric_attr.create('remapValue','v',om.MFnNumericData.kFloat)
         numeric_attr.setArray(True)
+        numeric_attr.setUsesArrayDataBuilder(True)
 
         cls.addAttribute(cls.totalIndex)
+        cls.addAttribute(cls.totalLocator)
         cls.addAttribute(cls.locator)
         cls.addAttribute(cls.remapValue)
-        cls.addAttribute(cls.totalLocator)
+
 
         cls.attributeAffects(cls.totalIndex,cls.remapValue)
         cls.attributeAffects(cls.locator,cls.remapValue)
@@ -195,34 +199,37 @@ class MBRemapNode(ommpx.MPxNode):
 
 
     def compute(self, plug, data: om.MDataBlock):
-        totalIndex = data.inputValue(self.totalIndex).asInt()
-        totalLocator = data.inputValue(self.totalLocator).asInt()
 
-        locatorHandle = data.inputArrayValue(self.locator)
-        pointList = []
-        if locatorHandle.elementCount() >= totalLocator:
-            for i in range(totalLocator):
-                locatorHandle.jumpToArrayElement(i)
-                locatorPoint = locatorHandle.inputValue().asDouble3()
-                pointList.append(locatorPoint)
-        else:
-            return
-        pointList = sort_2d_array(pointList)
-        print('pointList:',pointList)
-        for index in range(-totalIndex,totalIndex+1):
-            x = (1.0*index/totalIndex)/2+0.5
-            print('x:',x)
-            p1,p2 = between_rows(x,pointList)
-            print('p1:', p1)
-            print('p2:', p2)
-            y = xspline(x, p1, p2)
-
-            print('y:',y)
-            print()
+        if plug == self.remapValue:
+            totalIndex = data.inputValue(self.totalIndex).asInt()
+            totalLocator = data.inputValue(self.totalLocator).asInt()
+            remapValue_handle = data.outputArrayValue(self.remapValue)
+            remapValue_builder = remapValue_handle.builder()
+            locatorHandle = data.inputArrayValue(self.locator)
+            pointList = []
+            if locatorHandle.elementCount() >= totalLocator:
+                for i in range(totalLocator):
+                    locatorHandle.jumpToArrayElement(i)
+                    locatorPoint = locatorHandle.inputValue().asDouble3()
+                    pointList.append(locatorPoint)
+            else:
+                return
+            pointList = sort_2d_array(pointList)
 
 
+            for index in range(-totalIndex,totalIndex+1):
+                x = (1.0*index/totalIndex)/2+0.5
 
-        data.setClean(plug)
+                p1,p2 = between_rows(x,pointList)
+
+                y = xspline(x, p1, p2)
+
+                #output
+                listIndex = indexToListIndex(index,totalIndex)
+                remapValue_builder.addElement(listIndex).setFloat(y)
+
+            remapValue_handle.setAllClean()
+            data.setClean(plug)
 
 
 class MBCmptCoreNode(ommpx.MPxNode):
@@ -252,7 +259,7 @@ class MBCmptCoreNode(ommpx.MPxNode):
     def initialize(cls):
         numeric_attr = om.MFnNumericAttribute()
 
-        cls.CVs = numeric_attr.create('CVs', 'cvs', om.MFnNumericData.kInt, 5)
+        cls.CVs = numeric_attr.create('CVs', 'cvs', om.MFnNumericData.kInt, 4)
         numeric_attr.setKeyable(True)
         cls.addAttribute(cls.CVs)
 
@@ -279,13 +286,11 @@ class MBCmptCoreNode(ommpx.MPxNode):
         cls.iGuidePCG = numeric_attr.create('iGuidePCG', 'igpcg',om.MFnNumericData.k3Double)
         numeric_attr.setKeyable(True)
         numeric_attr.setArray(True)
-        # numeric_attr.setUsesArrayDataBuilder(True)
         cls.addAttribute(cls.iGuidePCG)
 
         cls.iMiddlePCG = numeric_attr.create('iMiddlePCG', 'impcg', om.MFnNumericData.k3Double)
         numeric_attr.setKeyable(True)
         numeric_attr.setArray(True)
-        numeric_attr.setUsesArrayDataBuilder(True)
         cls.addAttribute(cls.iMiddlePCG)
 
         cls.oPCG = numeric_attr.create('oPCG', 'opcg', om.MFnNumericData.k3Double)
@@ -308,68 +313,69 @@ class MBCmptCoreNode(ommpx.MPxNode):
     #
     def compute(self,plug,data: om.MDataBlock):
 
-        #
-        index = data.inputValue(self.index).asInt()
-        ratio = data.inputValue(self.ratio).asDouble()
-        CVs = data.inputValue(self.CVs).asInt()
-        totalIndex = data.inputValue(self.totalIndex).asInt()
-        totalMiddles = data.inputValue(self.totalMiddles).asInt()
+        if plug == self.oPCG:
+            index = data.inputValue(self.index).asInt()
+            ratio = data.inputValue(self.ratio).asDouble()
+            CVs = data.inputValue(self.CVs).asInt()
+            totalIndex = data.inputValue(self.totalIndex).asInt()
+            totalMiddles = data.inputValue(self.totalMiddles).asInt()
 
-        iGuidePCG = data.inputArrayValue(self.iGuidePCG)
-        iMiddlePCG = data.inputArrayValue(self.iMiddlePCG)
-        #
-        limitRatio = 0.5
-        if totalIndex != 0:
-            limitRatio = (1.0*index/totalIndex)/2+0.5
-        #
-        columns = CVs
-        rows = 4
+            iGuidePCG = data.inputArrayValue(self.iGuidePCG)
+            iMiddlePCG = data.inputArrayValue(self.iMiddlePCG)
+            #
+            limitRatio = 0.5
+            if totalIndex != 0:
+                limitRatio = (1.0*index/totalIndex)/2+0.5
+            #
+            columns = CVs
+            rows = 4
 
-        guideCVsCount = iGuidePCG.elementCount()
-        if guideCVsCount >= 4 * CVs:
-            guideCGP = [[None] * columns for _ in range(rows)]
-            for i in range(4 * CVs):
-                row, column = findPos(i, CVs)
-                iGuidePCG.jumpToArrayElement(i)
-                currentValue = iGuidePCG.inputValue().asDouble3()
-                guideCGP[row][column] = list(currentValue)
+            guideCVsCount = iGuidePCG.elementCount()
+            if guideCVsCount >= 4 * CVs:
+                guideCGP = [[None] * columns for _ in range(rows)]
+                for i in range(4 * CVs):
+                    row, column = findPos(i, CVs)
+                    iGuidePCG.jumpToArrayElement(i)
+                    currentValue = iGuidePCG.inputValue().asDouble3()
+                    guideCGP[row][column] = list(currentValue)
 
-            guideLCGP = blendListList(limitRatio,guideCGP[0],guideCGP[1])
-            guideRCGP = blendListList(limitRatio, guideCGP[2], guideCGP[3])
+                guideLCGP = blendListList(limitRatio,guideCGP[0],guideCGP[1])
+                guideRCGP = blendListList(limitRatio, guideCGP[2], guideCGP[3])
 
-        else:
-            return
+            else:
+                return
 
-        middleCVsCount = iMiddlePCG.elementCount()
-        if middleCVsCount >= totalMiddles * CVs:
-            rows = totalMiddles
-            middleCGP = [[None] * columns for _ in range(rows)]
-            for i in range(totalMiddles * CVs):
-                row, column = findPos(i, CVs)
-                iGuidePCG.jumpToArrayElement(i)
-                currentValue = iGuidePCG.inputValue().asDouble3()
-                middleCGP[row][column] = list(currentValue)
+            middleCVsCount = iMiddlePCG.elementCount()
+            if middleCVsCount >= totalMiddles * CVs:
+                rows = totalMiddles
+                middleCGP = [[None] * columns for _ in range(rows)]
+                for i in range(totalMiddles * CVs):
+                    row, column = findPos(i, CVs)
+                    iGuidePCG.jumpToArrayElement(i)
+                    currentValue = iGuidePCG.inputValue().asDouble3()
+                    middleCGP[row][column] = list(currentValue)
 
-        else:
-            return
-        middleCGP.insert(0, guideLCGP)
-        middleCGP.append(guideRCGP)
-
-
-        middleCGP = transpose_matrix(middleCGP)
+            else:
+                return
+            middleCGP.insert(0, guideLCGP)
+            middleCGP.append(guideRCGP)
 
 
-        #output
-        oPCG_handle = data.outputArrayValue(MBCmptCoreNode.oPCG)
-        oPCG_builder = oPCG_handle.builder()
-        for i,pointList in enumerate(middleCGP):
-            # interpolate point here
-            point = interpolate_bezier(ratio,pointList)
-            x = point[0]
-            y = point[1]
-            oPCG_builder.addElement(i).set3Double(x,y,0)
+            middleCGP = transpose_matrix(middleCGP)
 
-        data.setClean(plug)
+            print(middleCGP)
+
+            #output
+            oPCG_handle = data.outputArrayValue(MBCmptCoreNode.oPCG)
+            oPCG_builder = oPCG_handle.builder()
+            for i,pointList in enumerate(middleCGP):
+                # interpolate point here
+                point = interpolate_bezier(ratio,pointList)
+                x = point[0]
+                y = point[1]
+                oPCG_builder.addElement(i).set3Double(x,y,0)
+            oPCG_handle.setAllClean()
+            data.setClean(plug)
 
 
 
