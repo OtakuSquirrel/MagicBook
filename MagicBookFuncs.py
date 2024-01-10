@@ -147,7 +147,11 @@ def BSIDToIndex(BSID):
 def IDToPointOnCurve(ID):
     return 'MB_PointOnCurve_' + ID
 
+def totalBSsToBSIDs(totalBSs):
+    return [f'BS{i}' for i in range(totalBSs)]
 
+def IDToFlipCtrlorLoc(ID):
+    return f'MB_FCLoc_{ID}'
 # Create Rig
 def indexRange(totalIndex):
     return range(-1 * totalIndex, totalIndex + 1)
@@ -452,29 +456,32 @@ def createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
     createControler(ID, width, cvsMaxIndex)
 
 
-def createBSTarget(BSID, width, height, subDivWidth, subDivHeight):
-    createMesh(BSID, width, height, subDivWidth, subDivHeight)
-    BSName = IDToMeshName(BSID)
-    cmds.parent(BSName, 'BSGrp')
+def createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight):
+    shaderName = iToShaderName(7)
+    for BSID in BSIDs:
+        createMesh(BSID, width, height, subDivWidth, subDivHeight)
+        cmds.hyperShade(assign=shaderName)
+        BSName = IDToMeshName(BSID)
+        cmds.parent(BSName, 'BSGrp')
 
 
-def conductBS(BSID, ID):
-    pageName = IDToMeshName(ID)
-    BSTargetName = IDToMeshName(BSID)
-    BSNodeName = IDToBSName(ID)
-    BSIndex = BSIDToIndex(BSID)
-
-    if not cmds.objExists(BSNodeName):
-        cmds.blendShape(BSTargetName, pageName, name=BSNodeName)
-        skinCluster = IDToSkinClusterName(ID)
-        meshShapeNode = IDToMeshShapeNode(ID)
-        if cmds.objExists(skinCluster):
-            try:
-                cmds.reorderDeformers(skinCluster, BSNodeName, meshShapeNode)
-            except:
-                pass
-    else:
-        cmds.blendShape(BSNodeName, edit=True, target=(pageName, BSIndex, BSTargetName, 1.0))
+def conductBS(BSIDs, ID):
+    for BSID in BSIDs:
+        pageName = IDToMeshName(ID)
+        BSTargetName = IDToMeshName(BSID)
+        BSNodeName = IDToBSName(ID)
+        BSIndex = BSIDToIndex(BSID)
+        if not cmds.objExists(BSNodeName):
+            cmds.blendShape(BSTargetName, pageName, name=BSNodeName)
+            skinCluster = IDToSkinClusterName(ID)
+            meshShapeNode = IDToMeshShapeNode(ID)
+            if cmds.objExists(skinCluster):
+                try:
+                    cmds.reorderDeformers(skinCluster, BSNodeName, meshShapeNode)
+                except:
+                    pass
+        else:
+            cmds.blendShape(BSNodeName, edit=True, target=(pageName, BSIndex, BSTargetName, 1.0))
 
 
 def disableBS(ID):
@@ -611,6 +618,21 @@ def createBookSpineCurve():
         cmds.parent(joint, cvsGrp)
         cmds.connectAttr(f'{joint}.translate', f'{bookSpineCurveShapeName}.controlPoints[{i}]')
 
+    cmds.setAttr('MB_BookSpline_CV_0.v',False)
+    cmds.setAttr('MB_BookSpline_CV_1.v', False)
+    cmds.setAttr('MB_BookSpline_CV_2.v',False)
+    mult = cmds.createNode('multDoubleLinear')
+    cmds.setAttr(f'{mult}.input2',-1)
+    cmds.connectAttr('MB_BookSpline_CV_3.tx',f'{mult}.input1')
+    cmds.connectAttr(f'{mult}.output','MB_BookSpline_CV_0.tx')
+
+    mult = cmds.createNode('multDoubleLinear')
+    cmds.setAttr(f'{mult}.input2', -1)
+    cmds.connectAttr('MB_BookSpline_CV_2.tx', f'{mult}.input1')
+    cmds.connectAttr(f'{mult}.output', 'MB_BookSpline_CV_1.tx')
+
+    cmds.connectAttr('MB_BookSpline_CV_2.ty', 'MB_BookSpline_CV_1.ty')
+
     cmds.setAttr(f'{cvsGrp}.tz', 8)
     cmds.setAttr(f'{bookSpineCurve}.tz', 8)
 
@@ -640,11 +662,14 @@ subDivWidth = 5
 subDivHeight = 10
 cvsMaxIndex = 4
 totalMiddles = 3
+totalBSs = 2
+totalLocator = 6
 shaderColorList = [(29, 43, 83), (126, 37, 83),
                    (255, 0, 77), (250, 239, 93),
                    (54, 84, 134), (255, 0, 77), (250, 239, 93),
                    (255, 0, 77), (126, 37, 83)]
-
+guideIDs = ['LL', 'LR', 'RL', 'RR']
+BSIDs = totalBSsToBSIDs(totalBSs)
 # 准备
 cmds.file(new=True, force=True)
 createMBShader(shaderColorList)
@@ -660,12 +685,11 @@ for iindex in range(-totalIndex, totalIndex + 1):
     createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
 
 # 创建BS
-BSID = 'BS0'
-createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
+createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight)
 # 循环 应用BS
 for iindex in range(-totalIndex, totalIndex + 1):
     ID = indexToID(iindex)
-    conductBS(BSID, ID)
+    conductBS(BSIDs, ID)
 
 # # 创建BS
 # BSID = 'BS1'
@@ -691,7 +715,23 @@ for iindex in range(-totalIndex, totalIndex + 1):
     createPointOnCurveNode(ID)
 
 # 循环 偏移guide
-guideIDs = ['LL', 'LR', 'RL', 'RR']
 for ID in guideIDs:
     createPointOnCurveNode(ID)
 
+def createRemap(totalIndex,totalLocator):
+    remapNode = cmds.createNode('MBRemap')
+    for index in range(totalLocator):
+        ID = indexToID(index)
+        flipCtrlorLoc = IDToFlipCtrlorLoc(ID)
+        cmds.createNode('joint',n=flipCtrlorLoc)
+        cmds.parent(flipCtrlorLoc,'FlipCtrlor')
+        xValue = index/(totalLocator-1)
+        cmds.setAttr(f'{flipCtrlorLoc}.tx',xValue)
+        cmds.setAttr(f'{flipCtrlorLoc}.ty', 0.5)
+        cmds.connectAttr(f'{flipCtrlorLoc}.translate',f'{remapNode}.locator[{index}]')
+
+    # for index in range(totalIndex):
+    #
+    #     cmds.connectAttr()
+
+createRemap(totalIndex,totalLocator)

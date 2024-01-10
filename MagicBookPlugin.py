@@ -142,8 +142,6 @@ class MBRemapNode(ommpx.MPxNode):
     totalLocator = None
     totalIndex = None
     remapValue = None
-    # test only
-    count = None
 
     # init
     def __init__(self):
@@ -157,10 +155,8 @@ class MBRemapNode(ommpx.MPxNode):
     def initialize(cls):
         numeric_attr = om.MFnNumericAttribute()
 
-        # test only
-        cls.count = numeric_attr.create('count', 'c', om.MFnNumericData.kInt)
-        cls.addAttribute(cls.count)
-        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt, 4)
+
+        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt, 6)
         numeric_attr.setKeyable(True)
         numeric_attr.setMin(4)
         cls.totalIndex = numeric_attr.create('totalIndex', 'tid', om.MFnNumericData.kInt, 10)
@@ -183,10 +179,7 @@ class MBRemapNode(ommpx.MPxNode):
         cls.attributeAffects(cls.locator, cls.remapValue)
         cls.attributeAffects(cls.totalLocator, cls.remapValue)
 
-        # test only
-        cls.attributeAffects(cls.totalIndex, cls.count)
-        cls.attributeAffects(cls.locator, cls.count)
-        cls.attributeAffects(cls.totalLocator, cls.count)
+
 
     def compute(self, plug, data: om.MDataBlock):
 
