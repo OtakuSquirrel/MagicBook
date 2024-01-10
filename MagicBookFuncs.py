@@ -203,7 +203,7 @@ def createRigTree():
     levelName = 'Main'
     parentName = 'MagicBookGrp'
     deleteIfExist(levelName)
-    cmds.circle(n=levelName, normal=[0, 1, 0], radius=5)
+    cmds.circle(n=levelName, normal=[0, 1, 0], radius=10)
     # cmds.addAttr()
     cmds.parent(levelName, parentName)
 
@@ -219,23 +219,28 @@ def createRigTree():
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('GuideGeo.inheritsTransform', False)
 
-    levelName = 'CtrlCenter'
+    levelName = 'PagesCurveGrp'
+    parentName = 'Main'
+    deleteIfExist(levelName)
+    cmds.createNode('transform', n=levelName, p=parentName)
+
+    levelName = 'GuideCurveGrp'
+    parentName = 'Main'
+    deleteIfExist(levelName)
+    cmds.createNode('transform', n=levelName, p=parentName)
+
+    levelName = 'BookSpine'
+    parentName = 'Main'
+    deleteIfExist(levelName)
+    cmds.createNode('transform', n=levelName, p=parentName)
+
+    levelName = 'FlipCtrlor'
     parentName = 'Main'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
     levelName = 'DeformationSystem'
     parentName = 'Main'
-    deleteIfExist(levelName)
-    cmds.createNode('transform', n=levelName, p=parentName)
-
-    levelName = 'PagesCurveGrp'
-    parentName = 'DeformationSystem'
-    deleteIfExist(levelName)
-    cmds.createNode('transform', n=levelName, p=parentName)
-
-    levelName = 'GuideCurveGrp'
-    parentName = 'DeformationSystem'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
@@ -256,11 +261,6 @@ def createRigTree():
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('BSGrp.v', False)
-
-    levelName = 'BookSpine'
-    parentName = 'DeformationSystem'
-    deleteIfExist(levelName)
-    cmds.createNode('transform', n=levelName, p=parentName)
 
 
 def createMesh(ID, width, height, subDivWidth, subDivHeight):
@@ -419,7 +419,7 @@ def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
         injectJntWeight(ID, subDivWidth, subDivHeight)
         createCVCurve(ID, width, cvsMaxIndex)
         crvName = IDToCrvName(ID)
-        cmds.parent(crvName,'GuideCurveGrp')
+        cmds.parent(crvName, 'GuideCurveGrp')
         createIKHandle(ID, subDivWidth)
         createControler(ID, width, cvsMaxIndex)
 
@@ -436,6 +436,8 @@ def createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMax
         bindSkin(ID)
         injectJntWeight(ID, subDivWidth, subDivHeight)
         createCVCurve(ID, width, cvsMaxIndex)
+        crvName = IDToCrvName(ID)
+        cmds.parent(crvName, 'GuideCurveGrp')
         createIKHandle(ID, subDivWidth)
         createControler(ID, width, cvsMaxIndex)
 
@@ -591,6 +593,10 @@ def createBookSpineCurve():
     children = cmds.listRelatives(bookSpineCurve, children=True, fullPath=False)
     bookSpineCurveShapeName = 'MB_BookSpine_Curve_Shape'
     cmds.rename(children[0], bookSpineCurveShapeName)
+
+    cvsGrp = cmds.createNode('transform', n='MB_BookSpine_CVs')
+    cmds.parent(cvsGrp, 'BookSpine')
+
     for i in range(4):
         jointName = f'MB_BookSpline_CV_{i}'
         deleteIfExist(jointName)
@@ -602,21 +608,28 @@ def createBookSpineCurve():
         cmds.setAttr(f'{joint}.sx', keyable=False)
         cmds.setAttr(f'{joint}.sz', keyable=False)
         cmds.setAttr(f'{joint}.sy', keyable=False)
-        cmds.parent(joint, 'BookSpine')
+        cmds.parent(joint, cvsGrp)
         cmds.connectAttr(f'{joint}.translate', f'{bookSpineCurveShapeName}.controlPoints[{i}]')
 
+    cmds.setAttr(f'{cvsGrp}.tz', 8)
+    cmds.setAttr(f'{bookSpineCurve}.tz', 8)
 
-def createPointOnCurveNode(index):
-    ID = indexToID(index)
+
+def createPointOnCurveNode(ID):
     spineCurve = 'MB_BookSpine_Curve'
-    cmptCore = IDToCmptCore(ID)
     controlCrv = IDToCrvName(ID)
     pointOnCurveName = IDToPointOnCurve(ID)
     deleteIfExist(pointOnCurveName)
     pointOnCurve = cmds.createNode('pointOnCurveInfo', n=pointOnCurveName)
     cmds.connectAttr(f'{spineCurve}.local', f'{pointOnCurve}.inputCurve')
-    cmds.connectAttr(f'{cmptCore}.pp', f'{pointOnCurve}.parameter')
     cmds.connectAttr(f'{pointOnCurve}.result.position', f'{controlCrv}.translate')
+    cmptCore = IDToCmptCore(ID)
+    if cmds.objExists(cmptCore):
+        cmds.connectAttr(f'{cmptCore}.pp', f'{pointOnCurve}.parameter')
+    elif ID == 'LL' or ID == 'RL':
+        cmds.setAttr(f'{pointOnCurve}.parameter',0)
+    else:
+        cmds.setAttr(f'{pointOnCurve}.parameter',1)
 
 
 # 定义参数
@@ -631,8 +644,6 @@ shaderColorList = [(29, 43, 83), (126, 37, 83),
                    (255, 0, 77), (250, 239, 93),
                    (54, 84, 134), (255, 0, 77), (250, 239, 93),
                    (255, 0, 77), (126, 37, 83)]
-
-
 
 # 准备
 cmds.file(new=True, force=True)
@@ -662,7 +673,7 @@ for iindex in range(-totalIndex, totalIndex + 1):
 # # 循环 应用BS
 # conductBS(BSID, ID)
 
-# 自动中间页
+# 自动中间页 test only
 autoGuides()
 
 autoMiddles()
@@ -677,5 +688,10 @@ createBookSpineCurve()
 # 循环 创建点在线上，偏移书页
 for iindex in range(-totalIndex, totalIndex + 1):
     ID = indexToID(iindex)
-    createPointOnCurveNode(iindex)
+    createPointOnCurveNode(ID)
+
+# 循环 偏移guide
+guideIDs = ['LL', 'LR', 'RL', 'RR']
+for ID in guideIDs:
+    createPointOnCurveNode(ID)
 
