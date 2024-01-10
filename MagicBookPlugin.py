@@ -3,19 +3,8 @@ import maya.OpenMaya as om
 import maya.OpenMayaMPx as ommpx
 import maya.cmds as cmds
 import math
-
-def calculate_spline(x, x1, x2, y1, y2, dydx1=0, dydx2=0):
-    h = x2 - x1
-    if h != 0:
-        a = (dydx1 + dydx2 - 2 * (y2 - y1) / h) / (h * h)
-        b = (3 * (y2 - y1) / h - 2 * dydx1 - dydx2) / h
-        c = dydx1
-        d = y1
-        dx = x - x1
-        y = a * dx ** 3 + b * dx ** 2 + c * dx + d
-    else:
-        y = y1
-    return y
+from scipy.interpolate import CubicSpline
+import numpy as np
 
 def xspline(x, p1,p2):
     x1 = p1[0]
@@ -33,34 +22,30 @@ def xspline(x, p1,p2):
         y = y1
     return y
 
+
+def interpolate(t, vectors):
+    # 将向量列表分解为x和y坐标列表
+    x_coords = [vector[0] for vector in vectors]
+    y_coords = [vector[1] for vector in vectors]
+
+    # 创建x和y坐标的插值函数
+    x_interpolation = CubicSpline(np.linspace(0, 1, len(x_coords)), x_coords)
+    y_interpolation = CubicSpline(np.linspace(0, 1, len(y_coords)), y_coords)
+
+    # 使用这些插值函数来计算t点的x和y坐标
+    x = x_interpolation(t)
+    y = y_interpolation(t)
+
+    # 返回t点的三维坐标
+    return list([float(x), float(y), 0.0])
+
+
 def sort_2d_array(arr):
     if not arr:
         return arr
     sorted_arr = sorted(arr, key=lambda x: x[0])
     return sorted_arr
 
-def interpolate_bezier(ratio, control_points):
-    n = len(control_points) - 1
-
-    def binomial_coefficient(i, n):
-        """计算二项式系数"""
-        from math import factorial
-        return factorial(n) // (factorial(i) * factorial(n - i))
-
-    def bernstein_poly(i, n, t):
-        """计算Bernstein多项式"""
-        return binomial_coefficient(i, n) * (1 - t)**(n - i) * t**i
-
-    x, y, _ = zip(*control_points)
-    z = [0] * (n + 1)
-
-    point = [sum(bernstein_poly(i, n, ratio) * coord for i, coord in enumerate(axis)) for axis in [x, y, z]]
-
-    return tuple(point)
-
-def linear(x, x1, x2, y1, y2):
-    y = y1 + (y2 - y1) * (x - x1) / (x2 - x1)
-    return y
 
 def transpose_matrix(matrix):
     """
@@ -351,26 +336,28 @@ class MBCmptCoreNode(ommpx.MPxNode):
                 middleCGP = [[None] * columns for _ in range(rows)]
                 for i in range(totalMiddles * CVs):
                     row, column = findPos(i, CVs)
-                    iGuidePCG.jumpToArrayElement(i)
-                    currentValue = iGuidePCG.inputValue().asDouble3()
-                    middleCGP[row][column] = list(currentValue)
+                    iMiddlePCG.jumpToElement(i)
+                    currentValue = iMiddlePCG.inputValue().asDouble3()
 
+                    middleCGP[row][column] = list(currentValue)
             else:
                 return
+
+
             middleCGP.insert(0, guideLCGP)
             middleCGP.append(guideRCGP)
 
-
             middleCGP = transpose_matrix(middleCGP)
 
-            print(middleCGP)
 
             #output
             oPCG_handle = data.outputArrayValue(MBCmptCoreNode.oPCG)
             oPCG_builder = oPCG_handle.builder()
             for i,pointList in enumerate(middleCGP):
+
                 # interpolate point here
-                point = interpolate_bezier(ratio,pointList)
+                point = interpolate(ratio,pointList)
+
                 x = point[0]
                 y = point[1]
                 oPCG_builder.addElement(i).set3Double(x,y,0)

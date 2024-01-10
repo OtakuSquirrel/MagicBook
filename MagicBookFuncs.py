@@ -143,6 +143,12 @@ def createRigTree():
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('Geo.inheritsTransform',False)
 
+    levelName = 'GuideGeo'
+    parentName = 'Main'
+    deleteIfExist(levelName)
+    cmds.createNode('transform', n=levelName, p=parentName)
+    cmds.setAttr('GuideGeo.inheritsTransform', False)
+
     levelName = 'CtrlCenter'
     parentName = 'Main'
     deleteIfExist(levelName)
@@ -162,16 +168,20 @@ def createRigTree():
     parentName = 'DeformationSystem'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
+    cmds.setAttr('IKHandleGrp.v', False)
 
     levelName = 'JntGrp'
     parentName = 'DeformationSystem'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
+    cmds.setAttr('JntGrp.v', False)
 
     levelName = 'BSGrp'
     parentName = 'DeformationSystem'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
+    cmds.setAttr('BSGrp.v', False)
+
 def createMesh(ID, width, height, subDivWidth, subDivHeight):
     cmds.select(clear=True)
     meshName = IDToMeshName(ID)
@@ -293,10 +303,15 @@ def createControler(ID,width,cvsMaxIndex=4):
 
 def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
     guideIDs=['LL','LR','RL','RR']
+
     for i in range(len(guideIDs)):
-        shaderName = iToShaderName(4+i)
+        if i<2:
+            shaderName = iToShaderName(4)
+        else:
+            shaderName = iToShaderName(5)
         ID = guideIDs[i]
         createMesh(ID, width, height, subDivWidth, subDivHeight)
+        cmds.parent(IDToMeshName(ID), 'GuideGeo')
         cmds.hyperShade(assign=shaderName)
         createJointChain(ID, width, subDivWidth)
         bindSkin(ID)
@@ -307,10 +322,12 @@ def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
 
 def createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
     MiddleIDs = indexToMiddleIDs(totalMiddles)
+    shaderName = iToShaderName(6)
     for i in range(len(MiddleIDs)):
-        shaderName = iToShaderName(4+i)
+
         ID = MiddleIDs[i]
         createMesh(ID, width, height, subDivWidth, subDivHeight)
+        cmds.parent(IDToMeshName(ID), 'GuideGeo')
         cmds.hyperShade(assign=shaderName)
         createJointChain(ID, width, subDivWidth)
         bindSkin(ID)
@@ -377,7 +394,10 @@ subDivWidth = 5
 subDivHeight = 10
 cvsMaxIndex = 4
 totalMiddles = 3
-shaderColorList = [(29, 43, 83),(126, 37, 83),(255, 0, 77),(250, 239, 93), (54, 84, 134),(127, 199, 217),(255, 0, 77),(126, 37, 83)]
+shaderColorList = [(29, 43, 83),(126, 37, 83),
+                   (255, 0, 77),(250, 239, 93),
+                   (54, 84, 134),(255, 0, 77),(250, 239, 93),
+                   (255, 0, 77),(126, 37, 83)]
 index = 0
 ID = indexToID(index)
 
@@ -493,3 +513,6 @@ def createCmptCore(index,totalIndex,totalMiddles,cvsMaxIndex):
         cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]',f'{pageCtrlorsuffix}.translate')
 
 createCmptCore(0,totalIndex,totalMiddles,cvsMaxIndex)
+
+
+
