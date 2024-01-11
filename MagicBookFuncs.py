@@ -121,7 +121,7 @@ def IKHandleNameToID(ikhandleName):
 
 
 def IDToControlerName(ID):
-    return 'MB_Ctrlor_' + ID
+    return 'MB_Controller_' + ID
 
 
 def controlerNameToID(controlerName):
@@ -131,6 +131,9 @@ def controlerNameToID(controlerName):
 def IDToBSName(ID):
     return 'MB_BS_' + ID
 
+def indexToBSName(index):
+    ID = indexToID(index)
+    return IDToBSName(ID)
 
 def IDToCmptCore(ID):
     return 'MB_CmptCore_' + ID
@@ -147,17 +150,23 @@ def BSIDToIndex(BSID):
 def IDToPointOnCurve(ID):
     return 'MB_PointOnCurve_' + ID
 
+
 def totalBSsToBSIDs(totalBSs):
     return [f'BS{i}' for i in range(totalBSs)]
+
 
 def totalBSsToRemapIDs(totalBSs):
     return [f'MB_Remap_BS{i}' for i in range(totalBSs)]
 
-def IDToRemapID(ID):
-    return 'MB_Remap_'+ID
 
-def IDToRemapCtrlorLoc(ID):
-    return f'MB_FCLoc_{ID}'
+def IDToRemapID(ID):
+    return 'MB_Remap_' + ID
+
+
+def IDToRemapControllerLoc(ID):
+    return f'Loc_{ID}'
+
+
 # Create Rig
 def indexRange(totalIndex):
     return range(-1 * totalIndex, totalIndex + 1)
@@ -233,7 +242,7 @@ def createRigTree():
     parentName = 'Main'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
-    cmds.setAttr('PagesCurveGrp.v',False)
+    cmds.setAttr('PagesCurveGrp.v', False)
 
     levelName = 'GuideCurveGrp'
     parentName = 'Main'
@@ -245,7 +254,7 @@ def createRigTree():
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
-    levelName = 'FlipCtrlor'
+    levelName = 'RemapController'
     parentName = 'Main'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
@@ -363,7 +372,7 @@ def createIKHandle(ID, subDivWidth):
     cmds.hide(ikHandleName)
 
 
-def createControler(ID, width, cvsMaxIndex=4):
+def createController(ID, width, cvsMaxIndex=4):
     controlerName = IDToControlerName(ID)
     curveName = IDToCrvName(ID)
     curveShapeName = IDToCrvShapeName(ID)
@@ -386,10 +395,15 @@ def createControler(ID, width, cvsMaxIndex=4):
 
         plugHandle = '.tx'
         dsPlugHandle = '.xValue'
+
         cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
 
         plugHandle = '.ty'
         dsPlugHandle = '.yValue'
+        # addNode = cmds.createNode('addDoubleLinear')
+        # cmds.setAttr(f'{addNode}.input1', cvsList[i][1])
+        # cmds.connectAttr(controlerName_suffix + plugHandle, f'{addNode}.input2')
+        # cmds.connectAttr(f'{addNode}.output', curveShapeName + shapeNodePlug + dsPlugHandle)
         cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
 
         plugHandle = '.tz'
@@ -410,7 +424,7 @@ def createControler(ID, width, cvsMaxIndex=4):
         cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
 
         shaderName = f'MB_S_Ramp_{i}'
-        cmds.hyperShade(assign=shaderName)
+        cmds.hyperShade(controlerName_suffix,assign=shaderName)
 
 
 def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
@@ -432,7 +446,7 @@ def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
         crvName = IDToCrvName(ID)
         cmds.parent(crvName, 'GuideCurveGrp')
         createIKHandle(ID, subDivWidth)
-        createControler(ID, width, cvsMaxIndex)
+        createController(ID, width, cvsMaxIndex)
 
 
 def createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
@@ -450,7 +464,7 @@ def createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMax
         crvName = IDToCrvName(ID)
         cmds.parent(crvName, 'GuideCurveGrp')
         createIKHandle(ID, subDivWidth)
-        createControler(ID, width, cvsMaxIndex)
+        createController(ID, width, cvsMaxIndex)
 
 
 def createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
@@ -460,7 +474,7 @@ def createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
     injectJntWeight(ID, subDivWidth, subDivHeight)
     createCVCurve(ID, width, cvsMaxIndex)
     createIKHandle(ID, subDivWidth)
-    createControler(ID, width, cvsMaxIndex)
+    createController(ID, width, cvsMaxIndex)
 
 
 def createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight):
@@ -513,61 +527,61 @@ def resetControler(ID, cvsMaxIndex, width):
 
 # 自动引导 test only
 def autoGuides():
-    cmds.setAttr('MB_Ctrlor_LL_0.tx', 0)
-    cmds.setAttr('MB_Ctrlor_LL_0.ty', 0)
-    cmds.setAttr('MB_Ctrlor_LL_1.tx', -2)
-    cmds.setAttr('MB_Ctrlor_LL_1.ty', 1)
-    cmds.setAttr('MB_Ctrlor_LL_2.tx', -6)
-    cmds.setAttr('MB_Ctrlor_LL_2.ty', 1)
-    cmds.setAttr('MB_Ctrlor_LL_3.tx', -10)
-    cmds.setAttr('MB_Ctrlor_LL_3.ty', 0)
+    cmds.setAttr('MB_Controller_LL_0.tx', 0)
+    cmds.setAttr('MB_Controller_LL_0.ty', 0)
+    cmds.setAttr('MB_Controller_LL_1.tx', -2)
+    cmds.setAttr('MB_Controller_LL_1.ty', 1)
+    cmds.setAttr('MB_Controller_LL_2.tx', -6)
+    cmds.setAttr('MB_Controller_LL_2.ty', 1)
+    cmds.setAttr('MB_Controller_LL_3.tx', -10)
+    cmds.setAttr('MB_Controller_LL_3.ty', 0)
 
-    cmds.setAttr('MB_Ctrlor_LR_0.tx', 0)
-    cmds.setAttr('MB_Ctrlor_LR_0.ty', 0)
-    cmds.setAttr('MB_Ctrlor_LR_1.tx', -1)
-    cmds.setAttr('MB_Ctrlor_LR_1.ty', 2)
-    cmds.setAttr('MB_Ctrlor_LR_2.tx', -4)
-    cmds.setAttr('MB_Ctrlor_LR_2.ty', 3)
-    cmds.setAttr('MB_Ctrlor_LR_3.tx', -9)
-    cmds.setAttr('MB_Ctrlor_LR_3.ty', 1)
+    cmds.setAttr('MB_Controller_LR_0.tx', 0)
+    cmds.setAttr('MB_Controller_LR_0.ty', 0)
+    cmds.setAttr('MB_Controller_LR_1.tx', -1)
+    cmds.setAttr('MB_Controller_LR_1.ty', 2)
+    cmds.setAttr('MB_Controller_LR_2.tx', -4)
+    cmds.setAttr('MB_Controller_LR_2.ty', 3)
+    cmds.setAttr('MB_Controller_LR_3.tx', -9)
+    cmds.setAttr('MB_Controller_LR_3.ty', 1)
 
-    cmds.setAttr('MB_Ctrlor_RL_0.tx', 0)
-    cmds.setAttr('MB_Ctrlor_RL_0.ty', 0)
-    cmds.setAttr('MB_Ctrlor_RL_1.tx', 1)
-    cmds.setAttr('MB_Ctrlor_RL_1.ty', 2)
-    cmds.setAttr('MB_Ctrlor_RL_2.tx', 4)
-    cmds.setAttr('MB_Ctrlor_RL_2.ty', 3)
-    cmds.setAttr('MB_Ctrlor_RL_3.tx', 9)
-    cmds.setAttr('MB_Ctrlor_RL_3.ty', 1)
+    cmds.setAttr('MB_Controller_RL_0.tx', 0)
+    cmds.setAttr('MB_Controller_RL_0.ty', 0)
+    cmds.setAttr('MB_Controller_RL_1.tx', 1)
+    cmds.setAttr('MB_Controller_RL_1.ty', 2)
+    cmds.setAttr('MB_Controller_RL_2.tx', 4)
+    cmds.setAttr('MB_Controller_RL_2.ty', 3)
+    cmds.setAttr('MB_Controller_RL_3.tx', 9)
+    cmds.setAttr('MB_Controller_RL_3.ty', 1)
 
-    cmds.setAttr('MB_Ctrlor_RR_0.tx', 0)
-    cmds.setAttr('MB_Ctrlor_RR_0.ty', 0)
-    cmds.setAttr('MB_Ctrlor_RR_1.tx', 2)
-    cmds.setAttr('MB_Ctrlor_RR_1.ty', 1)
-    cmds.setAttr('MB_Ctrlor_RR_2.tx', 6)
-    cmds.setAttr('MB_Ctrlor_RR_2.ty', 1)
-    cmds.setAttr('MB_Ctrlor_RR_3.tx', 10)
-    cmds.setAttr('MB_Ctrlor_RR_3.ty', 0)
+    cmds.setAttr('MB_Controller_RR_0.tx', 0)
+    cmds.setAttr('MB_Controller_RR_0.ty', 0)
+    cmds.setAttr('MB_Controller_RR_1.tx', 2)
+    cmds.setAttr('MB_Controller_RR_1.ty', 1)
+    cmds.setAttr('MB_Controller_RR_2.tx', 6)
+    cmds.setAttr('MB_Controller_RR_2.ty', 1)
+    cmds.setAttr('MB_Controller_RR_3.tx', 10)
+    cmds.setAttr('MB_Controller_RR_3.ty', 0)
 
 
 def autoMiddles():
-    cmds.setAttr('MB_Ctrlor_Mid0_0.tx', 0)
-    cmds.setAttr('MB_Ctrlor_Mid0_0.ty', 0)
-    cmds.setAttr('MB_Ctrlor_Mid0_1.tx', -2)
-    cmds.setAttr('MB_Ctrlor_Mid0_1.ty', 3)
-    cmds.setAttr('MB_Ctrlor_Mid0_2.tx', -5)
-    cmds.setAttr('MB_Ctrlor_Mid0_2.ty', 5)
-    cmds.setAttr('MB_Ctrlor_Mid0_3.tx', -6)
-    cmds.setAttr('MB_Ctrlor_Mid0_3.ty', 8)
+    cmds.setAttr('MB_Controller_Mid0_0.tx', 0)
+    cmds.setAttr('MB_Controller_Mid0_0.ty', 0)
+    cmds.setAttr('MB_Controller_Mid0_1.tx', -2)
+    cmds.setAttr('MB_Controller_Mid0_1.ty', 3)
+    cmds.setAttr('MB_Controller_Mid0_2.tx', -5)
+    cmds.setAttr('MB_Controller_Mid0_2.ty', 5)
+    cmds.setAttr('MB_Controller_Mid0_3.tx', -6)
+    cmds.setAttr('MB_Controller_Mid0_3.ty', 8)
 
-    cmds.setAttr('MB_Ctrlor_Mid2_0.tx', 0)
-    cmds.setAttr('MB_Ctrlor_Mid2_0.ty', 0)
-    cmds.setAttr('MB_Ctrlor_Mid2_1.tx', 2)
-    cmds.setAttr('MB_Ctrlor_Mid2_1.ty', 3)
-    cmds.setAttr('MB_Ctrlor_Mid2_2.tx', 5)
-    cmds.setAttr('MB_Ctrlor_Mid2_2.ty', 5)
-    cmds.setAttr('MB_Ctrlor_Mid2_3.tx', 6)
-    cmds.setAttr('MB_Ctrlor_Mid2_3.ty', 8)
+    cmds.setAttr('MB_Controller_Mid2_0.tx', 0)
+    cmds.setAttr('MB_Controller_Mid2_0.ty', 0)
+    cmds.setAttr('MB_Controller_Mid2_1.tx', 2)
+    cmds.setAttr('MB_Controller_Mid2_1.ty', 3)
+    cmds.setAttr('MB_Controller_Mid2_2.tx', 5)
+    cmds.setAttr('MB_Controller_Mid2_2.ty', 5)
+    cmds.setAttr('MB_Controller_Mid2_3.tx', 6)
+    cmds.setAttr('MB_Controller_Mid2_3.ty', 8)
 
 
 def createCmptCore(index, totalIndex, totalMiddles, cvsMaxIndex):
@@ -581,22 +595,22 @@ def createCmptCore(index, totalIndex, totalMiddles, cvsMaxIndex):
     cmds.setAttr(f'{MBCmptCore}.totalIndex', totalIndex)
 
     for i, guideID in enumerate(guideIDs):
-        guideCtrlor = IDToControlerName(guideID)
+        guideController = IDToControlerName(guideID)
         for j in range(cvsMaxIndex):
             t = cvsMaxIndex * i + j
-            cmds.connectAttr(f'{guideCtrlor}_{j}.translate', f'{cmptCoreName}.iGuidePCG[{t}]')
+            cmds.connectAttr(f'{guideController}_{j}.translate', f'{cmptCoreName}.iGuidePCG[{t}]')
 
     MiddleIDs = indexToMiddleIDs(totalMiddles)
     for i, middleID in enumerate(MiddleIDs):
-        middleCtrlor = IDToControlerName(middleID)
+        middleController = IDToControlerName(middleID)
         for j in range(cvsMaxIndex):
             t = cvsMaxIndex * i + j
-            cmds.connectAttr(f'{middleCtrlor}_{j}.translate', f'{cmptCoreName}.iMiddlePCG[{t}]')
+            cmds.connectAttr(f'{middleController}_{j}.translate', f'{cmptCoreName}.iMiddlePCG[{t}]')
 
-    pageCtrlor = IDToControlerName(ID)
+    pageController = IDToControlerName(ID)
     for i in range(cvsMaxIndex):
-        pageCtrlorsuffix = addSuffix(pageCtrlor, i)
-        cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]', f'{pageCtrlorsuffix}.translate')
+        pageControllersuffix = addSuffix(pageController, i)
+        cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]', f'{pageControllersuffix}.translate')
 
 
 def createBookSpineCurve():
@@ -625,14 +639,14 @@ def createBookSpineCurve():
         cmds.parent(joint, cvsGrp)
         cmds.connectAttr(f'{joint}.translate', f'{bookSpineCurveShapeName}.controlPoints[{i}]')
 
-    cmds.setAttr('MB_BookSpline_CV_0.v',False)
+    cmds.setAttr('MB_BookSpline_CV_0.v', False)
     cmds.setAttr('MB_BookSpline_CV_1.v', False)
     cmds.setAttr('MB_BookSpline_CV_1.radius', 0.5)
     cmds.setAttr('MB_BookSpline_CV_2.radius', 0.5)
     mult = cmds.createNode('multDoubleLinear')
-    cmds.setAttr(f'{mult}.input2',-1)
-    cmds.connectAttr('MB_BookSpline_CV_3.tx',f'{mult}.input1')
-    cmds.connectAttr(f'{mult}.output','MB_BookSpline_CV_0.tx')
+    cmds.setAttr(f'{mult}.input2', -1)
+    cmds.connectAttr('MB_BookSpline_CV_3.tx', f'{mult}.input1')
+    cmds.connectAttr(f'{mult}.output', 'MB_BookSpline_CV_0.tx')
 
     mult = cmds.createNode('multDoubleLinear')
     cmds.setAttr(f'{mult}.input2', -1)
@@ -657,28 +671,129 @@ def createPointOnCurveNode(ID):
     if cmds.objExists(cmptCore):
         cmds.connectAttr(f'{cmptCore}.pp', f'{pointOnCurve}.parameter')
     elif ID == 'LL' or ID == 'RL':
-        cmds.setAttr(f'{pointOnCurve}.parameter',0)
+        cmds.setAttr(f'{pointOnCurve}.parameter', 0)
     else:
-        cmds.setAttr(f'{pointOnCurve}.parameter',1)
+        cmds.setAttr(f'{pointOnCurve}.parameter', 1)
 
+def createRemap(totalIndex,ID, totalLocator):
+    # create fence
+    fence = f'MB_{ID}_Fence'
+    deleteIfExist(fence)
+    cmds.curve(name=fence, d=1, p=[(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0), (0, 0, 0)])
+    cmds.setAttr(f'{fence}.overrideEnabled', True)
+    cmds.setAttr(f'{fence}.overrideColor', 17)
+    cmds.parent(fence, 'RemapController')
+    # create display curve
+    crv = f'MB_{ID}_Crv'
+    cmds.curve(name=crv, d=1, p=[(i, 0, 0) for i in range(totalLocator)])
+    cmds.parent(crv, fence)
+    cmds.setAttr(f'{crv}.overrideEnabled', True)
+    cmds.setAttr(f'{crv}.overrideColor', 18)
+
+    # create remap node 'MB_Remap_' + ID
+    remapNodeName = IDToRemapID(ID)
+    remapNode = cmds.createNode('MBRemap', n=remapNodeName)
+    cmds.setAttr(f'{remapNode}.totalIndex',totalIndex)
+    cmds.setAttr(f'{remapNode}.totalLocator', totalLocator)
+    for iindex in range(totalLocator):
+        # iID = indexToID(iindex)
+        remapControllerLoc = ID + str(iindex)
+        foreRemapControllerLoc = ID + str(iindex-1)
+        cmds.createNode('joint', n=remapControllerLoc)
+        cmds.parent(remapControllerLoc, 'RemapController')
+        xValue = iindex / totalLocator / 2 + 0.5
+        cmds.setAttr(f'{remapControllerLoc}.tx', iindex / (totalLocator - 1))
+        cmds.setAttr(f'{remapControllerLoc}.ty', 0.5)
+        cmds.connectAttr(f'{remapControllerLoc}.translate', f'{remapNode}.locator[{iindex}]')
+        cmds.parent(remapControllerLoc, fence)
+        cmds.setAttr(f'{remapControllerLoc}.tz', lock=True)
+        cmds.setAttr(f'{remapControllerLoc}.rx', keyable=False)
+        cmds.setAttr(f'{remapControllerLoc}.ry', keyable=False)
+        cmds.setAttr(f'{remapControllerLoc}.rz', keyable=False)
+        cmds.setAttr(f'{remapControllerLoc}.sx', keyable=False)
+        cmds.setAttr(f'{remapControllerLoc}.sy', keyable=False)
+        cmds.setAttr(f'{remapControllerLoc}.sz', keyable=False)
+        cmds.setAttr(f'{remapControllerLoc}.minTransXLimitEnable', True)
+        cmds.setAttr(f'{remapControllerLoc}.maxTransXLimitEnable', True)
+        cmds.setAttr(f'{remapControllerLoc}.minTransYLimitEnable', True)
+        cmds.setAttr(f'{remapControllerLoc}.maxTransYLimitEnable', True)
+        if iindex == 0:
+            cmds.setAttr(f'{remapControllerLoc}.minTransXLimit', 0)
+        else:
+
+            cmds.connectAttr(f'{foreRemapControllerLoc}.tx', f'{remapControllerLoc}.minTransXLimit')
+
+        cmds.setAttr(f'{remapControllerLoc}.minTransYLimit', 0)
+        cmds.connectAttr(f'{remapControllerLoc}.translate', f'{crv}.controlPoints[{iindex}]')
+    cmds.setAttr(f'{fence}.sx', 6)
+    cmds.setAttr(f'{fence}.sy', 6)
+    cmds.setAttr(f'{fence}.sz', 6)
+
+    if ID == 'cmpt':
+        cmds.setAttr(f'{fence}.tx', 12)
+    else:
+        index = BSIDToIndex(ID)
+        cmds.setAttr(f'{fence}.tx', -16)
+        cmds.setAttr(f'{fence}.ty', 7 * index)
+
+
+def conductRemap(ID, totalIndex, target):
+    fence = f'MB_{ID}_Fence'
+    # remapNodeName:'MB_Remap_' + ID
+    remapNodeName = IDToRemapID(ID)
+    for index in range(-totalIndex, totalIndex + 1):
+        ID = indexToID(index)
+        cmptCore = IDToCmptCore(ID)
+        iindex = index + totalIndex
+        if target == 'cmptCore':
+            cmds.connectAttr(f'{remapNodeName}.remapValue[{iindex}]', f'{cmptCore}.ratio')
+        else:
+            BSName = indexToBSName(index)
+            BSMeshID = IDToMeshName(target)
+            cmds.connectAttr(f'{remapNodeName}.remapValue[{iindex}]', f'{BSName}.{BSMeshID}')
+            cmds.setAttr(f'{fence}.overrideEnabled', True)
+            cmds.setAttr(f'{fence}.overrideColor', 23)
+
+def createCloseAttr(width,cvsMaxIndex,guideIDs,totalMiddles):
+    cmds.addAttr('Main',ln='close',attributeType="float", defaultValue=1.0,minValue=0.0, maxValue=1.0)
+    MiddleIDs = indexToMiddleIDs(totalMiddles)
+    IDs = guideIDs[:2]
+    IDs.append(MiddleIDs)
+    IDs.append(guideIDs[2:])
+    for index in range(totalMiddles+4):
+        ID=indexToID(index)
+        controller = IDToControlerName(ID)
+        for cv in range(cvsMaxIndex):
+            nodeName = addSuffix(controller,cv)
+            connections = cmds.listConnections(f'{nodeName}.translate', source=True, destination=False, plugs=True)
+            multiply_node = cmds.createNode('multiplyDivide')
+            add_node = cmds.createNode('addDoubleLinear')
+            # 设置乘数节点的输入1为原始的translate属性
+            cmds.connectAttr(f'{nodeName}.translate', multiply_node + '.input1')
+            cmds.connectAttr('Main.close',multiply_node + '.input2')
+
+            # 将乘数节点的输出连接到其他节点
+            for destination_plug in connections:
+                cmds.connectAttr(f'{multiply_node}.output', destination_plug, force=True)
 
 # 定义参数
-totalIndex = 10
+totalIndex = 4
 width = 10
 height = 15
-subDivWidth = 5
+subDivWidth = 7
 subDivHeight = 10
-cvsMaxIndex = 4
-totalMiddles = 3
+cvsMaxIndex = 4 # 修改这个会让自动放置失效
+totalMiddles = 3 #修改这个会让自动放置失效
 totalBSs = 2
-totalLocator = 4
-shaderColorList = [(29, 43, 83), (126, 37, 83),
-                   (255, 0, 77), (250, 239, 93),
-                   (54, 84, 134), (255, 0, 77), (250, 239, 93),
-                   (255, 0, 77), (126, 37, 83)]
+totalFlipRemapLocator = 4
+totalBSRemapLocator = 5
+shaderColorList = [(29, 43, 83), (126, 37, 83), (255, 0, 77), (250, 239, 93),  # cv controllers
+                   (54, 84, 134), (255, 0, 77), (250, 239, 93),  # LGuides, RGuides, Middles
+                   (67, 118, 108),  # BSMesh
+                   (126, 37, 83)]
 guideIDs = ['LL', 'LR', 'RL', 'RR']
 BSIDs = totalBSsToBSIDs(totalBSs)
-remapID='MB_Remap_Flip'
+remapID = 'cmpt'
 
 # 准备
 cmds.file(new=True, force=True)
@@ -701,17 +816,10 @@ for iindex in range(-totalIndex, totalIndex + 1):
     ID = indexToID(iindex)
     conductBS(BSIDs, ID)
 
-
-# # 创建BS
-# BSID = 'BS1'
-# createBSTarget(BSID, width, height, subDivWidth, subDivHeight)
-# # 循环 应用BS
-# conductBS(BSID, ID)
-
 # 自动中间页 test only
 autoGuides()
-
 autoMiddles()
+
 # 循环 创建MB计算核心
 for iindex in range(-totalIndex, totalIndex + 1):
     ID = indexToID(iindex)
@@ -729,70 +837,12 @@ for iindex in range(-totalIndex, totalIndex + 1):
 for ID in guideIDs:
     createPointOnCurveNode(ID)
 
-def createRemap(remapID, totalLocator):
-    # create fence
-    fence = f'MB_{remapID}_Fence'
-    deleteIfExist(fence)
-    cmds.curve(name=fence, d=1, p=[(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0), (0, 0, 0)])
-    cmds.setAttr(f'{fence}.overrideEnabled',True)
-    cmds.setAttr(f'{fence}.overrideColor',17)
-    cmds.parent(fence,'FlipCtrlor')
-    # create display curve
-    crv = f'MB_{remapID}_Crv'
-    cmds.curve(name=crv,d=1,p=[(i,0,0) for i in range(totalLocator)])
-    cmds.parent(crv,fence)
-    cmds.setAttr(f'{crv}.overrideEnabled', True)
-    cmds.setAttr(f'{crv}.overrideColor', 18)
-    # create remap node
-    remapNode = cmds.createNode('MBRemap', n=remapID)
-    for index in range(totalLocator):
-        ID = indexToID(index)
-        remapCtrlorLoc = IDToRemapCtrlorLoc(ID)
-        cmds.createNode('joint',n=remapCtrlorLoc)
-        cmds.parent(remapCtrlorLoc,'FlipCtrlor')
-        xValue = index/totalLocator/2+0.5
-        cmds.setAttr(f'{remapCtrlorLoc}.tx',index/(totalLocator-1))
-        cmds.setAttr(f'{remapCtrlorLoc}.ty', 0.5)
-        cmds.connectAttr(f'{remapCtrlorLoc}.translate',f'{remapNode}.locator[{index}]')
-        cmds.parent(remapCtrlorLoc,fence)
-        cmds.setAttr(f'{remapCtrlorLoc}.tz',lock=True)
-        cmds.setAttr(f'{remapCtrlorLoc}.rx',keyable=False)
-        cmds.setAttr(f'{remapCtrlorLoc}.ry', keyable=False)
-        cmds.setAttr(f'{remapCtrlorLoc}.rz', keyable=False)
-        cmds.setAttr(f'{remapCtrlorLoc}.sx', keyable=False)
-        cmds.setAttr(f'{remapCtrlorLoc}.sy', keyable=False)
-        cmds.setAttr(f'{remapCtrlorLoc}.sz', keyable=False)
-        cmds.setAttr(f'{remapCtrlorLoc}.minTransXLimitEnable',True)
-        cmds.setAttr(f'{remapCtrlorLoc}.maxTransXLimitEnable', True)
-        cmds.setAttr(f'{remapCtrlorLoc}.minTransYLimitEnable', True)
-        cmds.setAttr(f'{remapCtrlorLoc}.maxTransYLimitEnable', True)
-        if index == 0:
-            cmds.setAttr(f'{remapCtrlorLoc}.minTransXLimit',0)
-        else:
-            foreFlipCtrlorLoc = IDToRemapCtrlorLoc(indexToID(index - 1))
-            cmds.connectAttr(f'{foreFlipCtrlorLoc}.tx',f'{remapCtrlorLoc}.minTransXLimit')
 
-        cmds.setAttr(f'{remapCtrlorLoc}.minTransYLimit',0)
-        cmds.connectAttr(f'{remapCtrlorLoc}.translate',f'{crv}.controlPoints[{index}]')
+# 创建Remap节点并应用
+createRemap(totalIndex,'cmpt', totalFlipRemapLocator)
+conductRemap('cmpt', totalIndex, 'cmptCore')
 
-    cmds.setAttr(f'{fence}.sx', 6)
-    cmds.setAttr(f'{fence}.sy', 6)
-    cmds.setAttr(f'{fence}.sz', 6)
-
-    if remapID == 'MB_Remap_Flip':
-        cmds.setAttr(f'{fence}.tx',12)
-    else:
-        cmds.setAttr(f'{fence}.tx', -12)
-
-
-def conductRemap(remapID,totalIndex):
-    for index in range(-totalIndex,totalIndex+1):
-        ID = indexToID(index)
-        cmptCore = IDToCmptCore(ID)
-        iindex = index+totalIndex
-        cmds.connectAttr(f'{remapID}.remapValue[{iindex}]',f'{cmptCore}.ratio')
-
-
-createRemap(remapID,totalLocator)
-conductRemap(remapID,totalIndex)
-
+# 创建BS的Remap节点并应用
+for BSID in BSIDs:
+    createRemap(totalIndex,BSID, totalBSRemapLocator)
+    conductRemap(BSID, totalIndex, BSID)
