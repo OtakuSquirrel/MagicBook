@@ -155,8 +155,7 @@ class MBRemapNode(ommpx.MPxNode):
     def initialize(cls):
         numeric_attr = om.MFnNumericAttribute()
 
-
-        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt, 6)
+        cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt, 4)
         numeric_attr.setKeyable(True)
         numeric_attr.setMin(4)
         cls.totalIndex = numeric_attr.create('totalIndex', 'tid', om.MFnNumericData.kInt, 10)

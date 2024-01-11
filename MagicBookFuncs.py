@@ -150,7 +150,13 @@ def IDToPointOnCurve(ID):
 def totalBSsToBSIDs(totalBSs):
     return [f'BS{i}' for i in range(totalBSs)]
 
-def IDToFlipCtrlorLoc(ID):
+def totalBSsToRemapIDs(totalBSs):
+    return [f'MB_Remap_BS{i}' for i in range(totalBSs)]
+
+def IDToRemapID(ID):
+    return 'MB_Remap_'+ID
+
+def IDToRemapCtrlorLoc(ID):
     return f'MB_FCLoc_{ID}'
 # Create Rig
 def indexRange(totalIndex):
@@ -227,6 +233,7 @@ def createRigTree():
     parentName = 'Main'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
+    cmds.setAttr('PagesCurveGrp.v',False)
 
     levelName = 'GuideCurveGrp'
     parentName = 'Main'
@@ -620,7 +627,8 @@ def createBookSpineCurve():
 
     cmds.setAttr('MB_BookSpline_CV_0.v',False)
     cmds.setAttr('MB_BookSpline_CV_1.v', False)
-    cmds.setAttr('MB_BookSpline_CV_2.v',False)
+    cmds.setAttr('MB_BookSpline_CV_1.radius', 0.5)
+    cmds.setAttr('MB_BookSpline_CV_2.radius', 0.5)
     mult = cmds.createNode('multDoubleLinear')
     cmds.setAttr(f'{mult}.input2',-1)
     cmds.connectAttr('MB_BookSpline_CV_3.tx',f'{mult}.input1')
@@ -663,13 +671,15 @@ subDivHeight = 10
 cvsMaxIndex = 4
 totalMiddles = 3
 totalBSs = 2
-totalLocator = 6
+totalLocator = 4
 shaderColorList = [(29, 43, 83), (126, 37, 83),
                    (255, 0, 77), (250, 239, 93),
                    (54, 84, 134), (255, 0, 77), (250, 239, 93),
                    (255, 0, 77), (126, 37, 83)]
 guideIDs = ['LL', 'LR', 'RL', 'RR']
 BSIDs = totalBSsToBSIDs(totalBSs)
+remapID='MB_Remap_Flip'
+
 # 准备
 cmds.file(new=True, force=True)
 createMBShader(shaderColorList)
@@ -690,6 +700,7 @@ createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight)
 for iindex in range(-totalIndex, totalIndex + 1):
     ID = indexToID(iindex)
     conductBS(BSIDs, ID)
+
 
 # # 创建BS
 # BSID = 'BS1'
@@ -718,20 +729,70 @@ for iindex in range(-totalIndex, totalIndex + 1):
 for ID in guideIDs:
     createPointOnCurveNode(ID)
 
-def createRemap(totalIndex,totalLocator):
-    remapNode = cmds.createNode('MBRemap')
+def createRemap(remapID, totalLocator):
+    # create fence
+    fence = f'MB_{remapID}_Fence'
+    deleteIfExist(fence)
+    cmds.curve(name=fence, d=1, p=[(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0), (0, 0, 0)])
+    cmds.setAttr(f'{fence}.overrideEnabled',True)
+    cmds.setAttr(f'{fence}.overrideColor',17)
+    cmds.parent(fence,'FlipCtrlor')
+    # create display curve
+    crv = f'MB_{remapID}_Crv'
+    cmds.curve(name=crv,d=1,p=[(i,0,0) for i in range(totalLocator)])
+    cmds.parent(crv,fence)
+    cmds.setAttr(f'{crv}.overrideEnabled', True)
+    cmds.setAttr(f'{crv}.overrideColor', 18)
+    # create remap node
+    remapNode = cmds.createNode('MBRemap', n=remapID)
     for index in range(totalLocator):
         ID = indexToID(index)
-        flipCtrlorLoc = IDToFlipCtrlorLoc(ID)
-        cmds.createNode('joint',n=flipCtrlorLoc)
-        cmds.parent(flipCtrlorLoc,'FlipCtrlor')
-        xValue = index/(totalLocator-1)
-        cmds.setAttr(f'{flipCtrlorLoc}.tx',xValue)
-        cmds.setAttr(f'{flipCtrlorLoc}.ty', 0.5)
-        cmds.connectAttr(f'{flipCtrlorLoc}.translate',f'{remapNode}.locator[{index}]')
+        remapCtrlorLoc = IDToRemapCtrlorLoc(ID)
+        cmds.createNode('joint',n=remapCtrlorLoc)
+        cmds.parent(remapCtrlorLoc,'FlipCtrlor')
+        xValue = index/totalLocator/2+0.5
+        cmds.setAttr(f'{remapCtrlorLoc}.tx',index/(totalLocator-1))
+        cmds.setAttr(f'{remapCtrlorLoc}.ty', 0.5)
+        cmds.connectAttr(f'{remapCtrlorLoc}.translate',f'{remapNode}.locator[{index}]')
+        cmds.parent(remapCtrlorLoc,fence)
+        cmds.setAttr(f'{remapCtrlorLoc}.tz',lock=True)
+        cmds.setAttr(f'{remapCtrlorLoc}.rx',keyable=False)
+        cmds.setAttr(f'{remapCtrlorLoc}.ry', keyable=False)
+        cmds.setAttr(f'{remapCtrlorLoc}.rz', keyable=False)
+        cmds.setAttr(f'{remapCtrlorLoc}.sx', keyable=False)
+        cmds.setAttr(f'{remapCtrlorLoc}.sy', keyable=False)
+        cmds.setAttr(f'{remapCtrlorLoc}.sz', keyable=False)
+        cmds.setAttr(f'{remapCtrlorLoc}.minTransXLimitEnable',True)
+        cmds.setAttr(f'{remapCtrlorLoc}.maxTransXLimitEnable', True)
+        cmds.setAttr(f'{remapCtrlorLoc}.minTransYLimitEnable', True)
+        cmds.setAttr(f'{remapCtrlorLoc}.maxTransYLimitEnable', True)
+        if index == 0:
+            cmds.setAttr(f'{remapCtrlorLoc}.minTransXLimit',0)
+        else:
+            foreFlipCtrlorLoc = IDToRemapCtrlorLoc(indexToID(index - 1))
+            cmds.connectAttr(f'{foreFlipCtrlorLoc}.tx',f'{remapCtrlorLoc}.minTransXLimit')
 
-    # for index in range(totalIndex):
-    #
-    #     cmds.connectAttr()
+        cmds.setAttr(f'{remapCtrlorLoc}.minTransYLimit',0)
+        cmds.connectAttr(f'{remapCtrlorLoc}.translate',f'{crv}.controlPoints[{index}]')
 
-createRemap(totalIndex,totalLocator)
+    cmds.setAttr(f'{fence}.sx', 6)
+    cmds.setAttr(f'{fence}.sy', 6)
+    cmds.setAttr(f'{fence}.sz', 6)
+
+    if remapID == 'MB_Remap_Flip':
+        cmds.setAttr(f'{fence}.tx',12)
+    else:
+        cmds.setAttr(f'{fence}.tx', -12)
+
+
+def conductRemap(remapID,totalIndex):
+    for index in range(-totalIndex,totalIndex+1):
+        ID = indexToID(index)
+        cmptCore = IDToCmptCore(ID)
+        iindex = index+totalIndex
+        cmds.connectAttr(f'{remapID}.remapValue[{iindex}]',f'{cmptCore}.ratio')
+
+
+createRemap(remapID,totalLocator)
+conductRemap(remapID,totalIndex)
+
