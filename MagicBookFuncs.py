@@ -259,6 +259,11 @@ def createRigTree():
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
+    levelName = 'BSGrp'
+    parentName = 'Main'
+    deleteIfExist(levelName)
+    cmds.createNode('transform', n=levelName, p=parentName)
+
     levelName = 'DeformationSystem'
     parentName = 'Main'
     deleteIfExist(levelName)
@@ -276,11 +281,7 @@ def createRigTree():
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('JntGrp.v', False)
 
-    levelName = 'BSGrp'
-    parentName = 'DeformationSystem'
-    deleteIfExist(levelName)
-    cmds.createNode('transform', n=levelName, p=parentName)
-    cmds.setAttr('BSGrp.v', False)
+
 
 
 def createMesh(ID, width, height, subDivWidth, subDivHeight):
@@ -379,7 +380,7 @@ def createController(ID, width, cvsMaxIndex=4):
     cvsList = getCVsPosList(cvsMaxIndex, width)
     for i in range(cvsMaxIndex):
         controlerName_suffix = controlerName + '_' + str(i)
-        cmds.sphere(name=controlerName_suffix, radius=0.5, sections=1)
+        cmds.createNode('joint',name=controlerName_suffix)
         plugHandle = '.tx'
         cmds.setAttr(controlerName_suffix + plugHandle, cvsList[i][0])
         plugHandle = '.ty'
@@ -400,10 +401,6 @@ def createController(ID, width, cvsMaxIndex=4):
 
         plugHandle = '.ty'
         dsPlugHandle = '.yValue'
-        # addNode = cmds.createNode('addDoubleLinear')
-        # cmds.setAttr(f'{addNode}.input1', cvsList[i][1])
-        # cmds.connectAttr(controlerName_suffix + plugHandle, f'{addNode}.input2')
-        # cmds.connectAttr(f'{addNode}.output', curveShapeName + shapeNodePlug + dsPlugHandle)
         cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
 
         plugHandle = '.tz'
@@ -422,9 +419,11 @@ def createController(ID, width, cvsMaxIndex=4):
         cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
         plugHandle = '.v'
         cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
-
-        shaderName = f'MB_S_Ramp_{i}'
-        cmds.hyperShade(controlerName_suffix,assign=shaderName)
+        try:
+            cmds.setAttr(f'{controlerName_suffix}.overrideEnabled', True)
+            cmds.setAttr(f'{controlerName_suffix}.overrideColor', i+14)
+        except:
+            pass
 
 
 def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
@@ -479,17 +478,33 @@ def createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
 
 def createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight):
     shaderName = iToShaderName(7)
-    for BSID in BSIDs:
+    for i,BSID in enumerate(BSIDs):
         createMesh(BSID, width, height, subDivWidth, subDivHeight)
-        cmds.hyperShade(assign=shaderName)
         BSName = IDToMeshName(BSID)
-        cmds.parent(BSName, 'BSGrp')
+
+
+        bend0 = cmds.nonLinear(type='bend', curvature=0,n=f'{BSName}_Bend_0',lowBound=0)
+        bend0Handle = f'{BSName}_Bend_0Handle'
+        cmds.setAttr(f'{bend0Handle}.rx',-45)
+        cmds.select(BSName)
+        bend1 = cmds.nonLinear(type='bend', curvature=0,n=f'{BSName}_Bend_1',lowBound=0)
+        bend1Handle = f'{BSName}_Bend_1Handle'
+        cmds.setAttr(f'{bend1Handle}.rx', 45)
+
+        cmds.select(BSName)
+        cmds.hyperShade(assign=shaderName)
+        cmds.parent(bend0Handle,BSName)
+        cmds.parent(bend1Handle, BSName)
+        cmds.parent(BSName,'BSGrp')
+        cmds.setAttr(f'{BSName}.tx',i * -3)
+    cmds.setAttr('BSGrp.tx',-20)
+
 
 
 def conductBS(BSIDs, ID):
     for BSID in BSIDs:
         pageName = IDToMeshName(ID)
-        BSTargetName = IDToMeshName(BSID)
+        BSTargetName = IDToMeshShapeNode(BSID)
         BSNodeName = IDToBSName(ID)
         BSIndex = BSIDToIndex(BSID)
         if not cmds.objExists(BSNodeName):
@@ -621,7 +636,8 @@ def createBookSpineCurve():
     children = cmds.listRelatives(bookSpineCurve, children=True, fullPath=False)
     bookSpineCurveShapeName = 'MB_BookSpine_Curve_Shape'
     cmds.rename(children[0], bookSpineCurveShapeName)
-
+    cmds.setAttr(f'{bookSpineCurve}.overrideEnabled', True)
+    cmds.setAttr(f'{bookSpineCurve}.overrideColor', 17)
     cvsGrp = cmds.createNode('transform', n='MB_BookSpine_CVs')
     cmds.parent(cvsGrp, 'BookSpine')
 
@@ -654,6 +670,8 @@ def createBookSpineCurve():
     cmds.connectAttr(f'{mult}.output', 'MB_BookSpline_CV_1.tx')
 
     cmds.connectAttr('MB_BookSpline_CV_2.ty', 'MB_BookSpline_CV_1.ty')
+    cmds.connectAttr('MB_BookSpline_CV_3.ty', 'MB_BookSpline_CV_0.ty')
+
 
     cmds.setAttr(f'{cvsGrp}.tz', 8)
     cmds.setAttr(f'{bookSpineCurve}.tz', 8)
@@ -733,7 +751,7 @@ def createRemap(totalIndex,ID, totalLocator):
         cmds.setAttr(f'{fence}.tx', 12)
     else:
         index = BSIDToIndex(ID)
-        cmds.setAttr(f'{fence}.tx', -16)
+        cmds.setAttr(f'{fence}.tx', -18)
         cmds.setAttr(f'{fence}.ty', 7 * index)
 
 
@@ -749,7 +767,7 @@ def conductRemap(ID, totalIndex, target):
             cmds.connectAttr(f'{remapNodeName}.remapValue[{iindex}]', f'{cmptCore}.ratio')
         else:
             BSName = indexToBSName(index)
-            BSMeshID = IDToMeshName(target)
+            BSMeshID = IDToMeshShapeNode(target)
             cmds.connectAttr(f'{remapNodeName}.remapValue[{iindex}]', f'{BSName}.{BSMeshID}')
             cmds.setAttr(f'{fence}.overrideEnabled', True)
             cmds.setAttr(f'{fence}.overrideColor', 23)
@@ -777,7 +795,7 @@ def createCloseAttr(width,cvsMaxIndex,guideIDs,totalMiddles):
                 cmds.connectAttr(f'{multiply_node}.output', destination_plug, force=True)
 
 # 定义参数
-totalIndex = 4
+totalIndex = 10
 width = 10
 height = 15
 subDivWidth = 7
@@ -786,7 +804,7 @@ cvsMaxIndex = 4 # 修改这个会让自动放置失效
 totalMiddles = 3 #修改这个会让自动放置失效
 totalBSs = 2
 totalFlipRemapLocator = 4
-totalBSRemapLocator = 5
+totalBSRemapLocator = 3
 shaderColorList = [(29, 43, 83), (126, 37, 83), (255, 0, 77), (250, 239, 93),  # cv controllers
                    (54, 84, 134), (255, 0, 77), (250, 239, 93),  # LGuides, RGuides, Middles
                    (67, 118, 108),  # BSMesh
@@ -816,9 +834,6 @@ for iindex in range(-totalIndex, totalIndex + 1):
     ID = indexToID(iindex)
     conductBS(BSIDs, ID)
 
-# 自动中间页 test only
-autoGuides()
-autoMiddles()
 
 # 循环 创建MB计算核心
 for iindex in range(-totalIndex, totalIndex + 1):
@@ -846,3 +861,8 @@ conductRemap('cmpt', totalIndex, 'cmptCore')
 for BSID in BSIDs:
     createRemap(totalIndex,BSID, totalBSRemapLocator)
     conductRemap(BSID, totalIndex, BSID)
+
+
+# 自动中间页 test only
+autoGuides()
+autoMiddles()

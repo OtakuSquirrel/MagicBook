@@ -157,7 +157,7 @@ class MBRemapNode(ommpx.MPxNode):
 
         cls.totalLocator = numeric_attr.create('totalLocator', 'tl', om.MFnNumericData.kInt, 4)
         numeric_attr.setKeyable(True)
-        numeric_attr.setMin(4)
+        numeric_attr.setMin(3)
         cls.totalIndex = numeric_attr.create('totalIndex', 'tid', om.MFnNumericData.kInt, 10)
         numeric_attr.setKeyable(True)
         numeric_attr.setMin(0)
