@@ -42,7 +42,7 @@ maya\modules\dropToInstall.mel
 For Windows user, press ```Win``` + ```R```, type in ```cmd```, press ```Enter```.
 
 
-```cd``` to your Maya installation directory. If Maya is installed in ```D:\...```, type in ```D:```, then cd to where Maya locates.
+```cd``` to your Maya installation directory. If Maya is installed in ```D:\...```, type in ```D:```, then ```cd``` to where Maya locates.
 
 
 Execute
