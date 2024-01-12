@@ -1,5 +1,5 @@
 import maya.cmds as cmds
-
+import os
 
 # Name
 def indexToID(index):
@@ -24,9 +24,18 @@ def iToShaderName(i):
     return f'MB_S_Ramp_{i}'
 
 
+def IDToShaderID(ID):
+    return f'MB_S_' + ID
+
+
 def indexToMeshName(index):
     meshName = 'MB_Mesh_' + indexToID(index)
     return meshName
+
+
+def indexToMeshShapeName(index):
+    meshShapeName = 'MB_Mesh_' + indexToID(index) + 'Shape'
+    return meshShapeName
 
 
 def IDToMeshName(ID):
@@ -131,9 +140,11 @@ def controlerNameToID(controlerName):
 def IDToBSName(ID):
     return 'MB_BS_' + ID
 
+
 def indexToBSName(index):
     ID = indexToID(index)
     return IDToBSName(ID)
+
 
 def IDToCmptCore(ID):
     return 'MB_CmptCore_' + ID
@@ -282,8 +293,6 @@ def createRigTree():
     cmds.setAttr('JntGrp.v', False)
 
 
-
-
 def createMesh(ID, width, height, subDivWidth, subDivHeight):
     cmds.select(clear=True)
     meshName = IDToMeshName(ID)
@@ -317,9 +326,6 @@ def bindSkin(ID):
     jntName = IDToJntName(ID)
     jntName = addSuffix(jntName, 0)
     skinClusterName = IDToSkinClusterName(ID)
-    if not (cmds.objExists(meshName) and cmds.objExists(jntName)):
-        print(meshName, 'or', jntName, 'missing')
-        return
     deleteIfExist(skinClusterName)
     cmds.skinCluster(jntName, meshName, name=skinClusterName)
     cmds.setAttr(f'{meshName}.tx', lock=False)
@@ -380,7 +386,7 @@ def createController(ID, width, cvsMaxIndex=4):
     cvsList = getCVsPosList(cvsMaxIndex, width)
     for i in range(cvsMaxIndex):
         controlerName_suffix = controlerName + '_' + str(i)
-        cmds.createNode('joint',name=controlerName_suffix)
+        cmds.createNode('joint', name=controlerName_suffix)
         plugHandle = '.tx'
         cmds.setAttr(controlerName_suffix + plugHandle, cvsList[i][0])
         plugHandle = '.ty'
@@ -421,7 +427,7 @@ def createController(ID, width, cvsMaxIndex=4):
         cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
         try:
             cmds.setAttr(f'{controlerName_suffix}.overrideEnabled', True)
-            cmds.setAttr(f'{controlerName_suffix}.overrideColor', i+14)
+            cmds.setAttr(f'{controlerName_suffix}.overrideColor', i + 14)
         except:
             pass
 
@@ -478,27 +484,25 @@ def createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex):
 
 def createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight):
     shaderName = iToShaderName(7)
-    for i,BSID in enumerate(BSIDs):
+    for i, BSID in enumerate(BSIDs):
         createMesh(BSID, width, height, subDivWidth, subDivHeight)
         BSName = IDToMeshName(BSID)
 
-
-        bend0 = cmds.nonLinear(type='bend', curvature=0,n=f'{BSName}_Bend_0',lowBound=0)
+        bend0 = cmds.nonLinear(type='bend', curvature=0, n=f'{BSName}_Bend_0', lowBound=0)
         bend0Handle = f'{BSName}_Bend_0Handle'
-        cmds.setAttr(f'{bend0Handle}.rx',-45)
+        cmds.setAttr(f'{bend0Handle}.rx', -45)
         cmds.select(BSName)
-        bend1 = cmds.nonLinear(type='bend', curvature=0,n=f'{BSName}_Bend_1',lowBound=0)
+        bend1 = cmds.nonLinear(type='bend', curvature=0, n=f'{BSName}_Bend_1', lowBound=0)
         bend1Handle = f'{BSName}_Bend_1Handle'
         cmds.setAttr(f'{bend1Handle}.rx', 45)
 
         cmds.select(BSName)
         cmds.hyperShade(assign=shaderName)
-        cmds.parent(bend0Handle,BSName)
+        cmds.parent(bend0Handle, BSName)
         cmds.parent(bend1Handle, BSName)
-        cmds.parent(BSName,'BSGrp')
-        cmds.setAttr(f'{BSName}.tx',i * -3)
-    cmds.setAttr('BSGrp.tx',-20)
-
+        cmds.parent(BSName, 'BSGrp')
+        cmds.setAttr(f'{BSName}.tx', i * -3)
+    cmds.setAttr('BSGrp.tx', -20)
 
 
 def conductBS(BSIDs, ID):
@@ -672,7 +676,6 @@ def createBookSpineCurve():
     cmds.connectAttr('MB_BookSpline_CV_2.ty', 'MB_BookSpline_CV_1.ty')
     cmds.connectAttr('MB_BookSpline_CV_3.ty', 'MB_BookSpline_CV_0.ty')
 
-
     cmds.setAttr(f'{cvsGrp}.tz', 8)
     cmds.setAttr(f'{bookSpineCurve}.tz', 8)
 
@@ -693,7 +696,8 @@ def createPointOnCurveNode(ID):
     else:
         cmds.setAttr(f'{pointOnCurve}.parameter', 1)
 
-def createRemap(totalIndex,ID, totalLocator):
+
+def createRemap(totalIndex, ID, totalLocator):
     # create fence
     fence = f'MB_{ID}_Fence'
     deleteIfExist(fence)
@@ -711,12 +715,12 @@ def createRemap(totalIndex,ID, totalLocator):
     # create remap node 'MB_Remap_' + ID
     remapNodeName = IDToRemapID(ID)
     remapNode = cmds.createNode('MBRemap', n=remapNodeName)
-    cmds.setAttr(f'{remapNode}.totalIndex',totalIndex)
+    cmds.setAttr(f'{remapNode}.totalIndex', totalIndex)
     cmds.setAttr(f'{remapNode}.totalLocator', totalLocator)
     for iindex in range(totalLocator):
         # iID = indexToID(iindex)
         remapControllerLoc = ID + str(iindex)
-        foreRemapControllerLoc = ID + str(iindex-1)
+        foreRemapControllerLoc = ID + str(iindex - 1)
         cmds.createNode('joint', n=remapControllerLoc)
         cmds.parent(remapControllerLoc, 'RemapController')
         xValue = iindex / totalLocator / 2 + 0.5
@@ -772,27 +776,140 @@ def conductRemap(ID, totalIndex, target):
             cmds.setAttr(f'{fence}.overrideEnabled', True)
             cmds.setAttr(f'{fence}.overrideColor', 23)
 
-def createCloseAttr(width,cvsMaxIndex,guideIDs,totalMiddles):
-    cmds.addAttr('Main',ln='close',attributeType="float", defaultValue=1.0,minValue=0.0, maxValue=1.0)
+
+def createCloseAttr(width, cvsMaxIndex, guideIDs, totalMiddles):
+    cmds.addAttr('Main', ln='close', attributeType="float", defaultValue=1.0, minValue=0.0, maxValue=1.0)
     MiddleIDs = indexToMiddleIDs(totalMiddles)
     IDs = guideIDs[:2]
     IDs.append(MiddleIDs)
     IDs.append(guideIDs[2:])
-    for index in range(totalMiddles+4):
-        ID=indexToID(index)
+    for index in range(totalMiddles + 4):
+        ID = indexToID(index)
         controller = IDToControlerName(ID)
         for cv in range(cvsMaxIndex):
-            nodeName = addSuffix(controller,cv)
+            nodeName = addSuffix(controller, cv)
             connections = cmds.listConnections(f'{nodeName}.translate', source=True, destination=False, plugs=True)
             multiply_node = cmds.createNode('multiplyDivide')
             add_node = cmds.createNode('addDoubleLinear')
             # 设置乘数节点的输入1为原始的translate属性
             cmds.connectAttr(f'{nodeName}.translate', multiply_node + '.input1')
-            cmds.connectAttr('Main.close',multiply_node + '.input2')
+            cmds.connectAttr('Main.close', multiply_node + '.input2')
 
             # 将乘数节点的输出连接到其他节点
             for destination_plug in connections:
                 cmds.connectAttr(f'{multiply_node}.output', destination_plug, force=True)
+
+
+def find_files_in_folder(directory, prefix='', suffix=''):
+    all_files = os.listdir(directory)
+    filtered_files = [file for file in all_files if file.startswith(prefix) and file.endswith(suffix)]
+    file_paths = [os.path.join(directory, file) for file in filtered_files]
+
+    return file_paths
+
+
+def doubleSideShader(shaderName, BSDF, textureFilePath1, textureFilePath2, roughness):
+    textureName1 = shaderName + '_T1'
+    textureName2 = shaderName + '_T2'
+    conditionName = shaderName + '_Con'
+    samplerInfoName = shaderName + '_Sam'
+
+    deleteIfExist(shaderName)
+    deleteIfExist(textureName1)
+    deleteIfExist(textureName2)
+    deleteIfExist(conditionName)
+    deleteIfExist(samplerInfoName)
+    # create nodes
+    shader = cmds.shadingNode(BSDF, name=shaderName, asShader=True)
+    texture1 = cmds.shadingNode('file', name=textureName1, asTexture=True)
+    texture2 = cmds.shadingNode('file', name=textureName2, asTexture=True)
+    condition = cmds.shadingNode('condition', asUtility=True, name=conditionName)
+    samplerInfo = cmds.shadingNode('samplerInfo', asUtility=True, name=samplerInfoName)
+
+    # connect and set attribute
+    cmds.connectAttr(f'{texture1}.outColor', f'{condition}.colorIfTrue')
+    cmds.connectAttr(f'{texture2}.outColor', f'{condition}.colorIfFalse')
+    cmds.connectAttr(f'{samplerInfo}.flippedNormal', f'{condition}.firstTerm')
+    cmds.connectAttr(f'{condition}.outColor', f'{shader}.baseColor')
+    cmds.setAttr(f'{texture1}.fileTextureName', textureFilePath1, type='string')
+    cmds.setAttr(f'{texture2}.fileTextureName', textureFilePath2, type='string')
+    cmds.setAttr(f'{shader}.specularRoughness', roughness)
+
+
+def assignPageShader(totalIndex, path, BSDF, roughness, prefix='', suffix=''):
+    for index in range(-totalIndex, totalIndex + 1):
+        ID = indexToID(index)
+        meshName = indexToMeshName(index)
+        shaderID = IDToShaderID(ID)
+        lIndex = index + totalIndex
+        file_paths = find_files_in_folder(path, prefix, suffix)
+        fileCount = len(file_paths)
+        if fileCount % 2:
+            return
+        if lIndex < fileCount / 2:
+            filePath1 = file_paths[lIndex * 2]
+            filePath2 = file_paths[lIndex * 2 + 1]
+            doubleSideShader(shaderID, BSDF, filePath1, filePath2, roughness)
+            cmds.select(meshName)
+            cmds.hyperShade(shaderID, assign=shaderID)
+        else:
+            shaderID = IDToShaderID(indexToID(int(fileCount / 2 - totalIndex - 1)))
+            cmds.select(meshName)
+            cmds.hyperShade(shaderID, assign=shaderID)
+
+
+def MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMiddles,totalBSs,totalFlipRemapLocator,totalBSRemapLocator):
+    shaderColorList = [(29, 43, 83), (126, 37, 83), (255, 0, 77), (250, 239, 93),  # cv controllers
+                       (54, 84, 134), (255, 0, 77), (250, 239, 93),  # LGuides, RGuides, Middles
+                       (67, 118, 108),  # BSMesh
+                       (126, 37, 83)]
+    guideIDs = ['LL', 'LR', 'RL', 'RR']
+    BSIDs = totalBSsToBSIDs(totalBSs)
+    remapID = 'cmpt'
+    createMBShader(shaderColorList)
+    createRigTree()
+
+    # 创建引导
+    createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex)
+    # 创建中间页
+    createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
+    # 循环 创建MBPage
+    for iindex in range(-totalIndex, totalIndex + 1):
+        ID = indexToID(iindex)
+        createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
+
+    # 创建BS
+    createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight)
+    # 循环 应用BS
+    for iindex in range(-totalIndex, totalIndex + 1):
+        ID = indexToID(iindex)
+        conductBS(BSIDs, ID)
+
+    # 循环 创建MB计算核心
+    for iindex in range(-totalIndex, totalIndex + 1):
+        ID = indexToID(iindex)
+        createCmptCore(iindex, totalIndex, totalMiddles, cvsMaxIndex)
+
+    # 创建书脊
+    createBookSpineCurve()
+
+    # 循环 创建点在线上，偏移书页
+    for iindex in range(-totalIndex, totalIndex + 1):
+        ID = indexToID(iindex)
+        createPointOnCurveNode(ID)
+
+    # 循环 偏移guide
+    for ID in guideIDs:
+        createPointOnCurveNode(ID)
+
+    # 创建Remap节点并应用
+    createRemap(totalIndex, 'cmpt', totalFlipRemapLocator)
+    conductRemap('cmpt', totalIndex, 'cmptCore')
+
+    # 创建BS的Remap节点并应用
+    for BSID in BSIDs:
+        createRemap(totalIndex, BSID, totalBSRemapLocator)
+        conductRemap(BSID, totalIndex, BSID)
 
 # 定义参数
 totalIndex = 10
@@ -800,69 +917,22 @@ width = 10
 height = 15
 subDivWidth = 7
 subDivHeight = 10
-cvsMaxIndex = 4 # 修改这个会让自动放置失效
-totalMiddles = 3 #修改这个会让自动放置失效
+cvsMaxIndex = 4  # 修改这个会让自动放置失效
+totalMiddles = 3  # 修改这个会让自动放置失效
 totalBSs = 2
 totalFlipRemapLocator = 4
 totalBSRemapLocator = 3
-shaderColorList = [(29, 43, 83), (126, 37, 83), (255, 0, 77), (250, 239, 93),  # cv controllers
-                   (54, 84, 134), (255, 0, 77), (250, 239, 93),  # LGuides, RGuides, Middles
-                   (67, 118, 108),  # BSMesh
-                   (126, 37, 83)]
-guideIDs = ['LL', 'LR', 'RL', 'RR']
-BSIDs = totalBSsToBSIDs(totalBSs)
-remapID = 'cmpt'
 
-# 准备
+# 创建Rig
 cmds.file(new=True, force=True)
-createMBShader(shaderColorList)
-createRigTree()
-
-# 创建引导
-createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex)
-# 创建中间页
-createMiddles(totalMiddles, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
-# 循环 创建MBPage
-for iindex in range(-totalIndex, totalIndex + 1):
-    ID = indexToID(iindex)
-    createPage(ID, width, height, subDivWidth, subDivHeight, cvsMaxIndex)
-
-# 创建BS
-createBSTarget(BSIDs, width, height, subDivWidth, subDivHeight)
-# 循环 应用BS
-for iindex in range(-totalIndex, totalIndex + 1):
-    ID = indexToID(iindex)
-    conductBS(BSIDs, ID)
-
-
-# 循环 创建MB计算核心
-for iindex in range(-totalIndex, totalIndex + 1):
-    ID = indexToID(iindex)
-    createCmptCore(iindex, totalIndex, totalMiddles, cvsMaxIndex)
-
-# 创建书脊
-createBookSpineCurve()
-
-# 循环 创建点在线上，偏移书页
-for iindex in range(-totalIndex, totalIndex + 1):
-    ID = indexToID(iindex)
-    createPointOnCurveNode(ID)
-
-# 循环 偏移guide
-for ID in guideIDs:
-    createPointOnCurveNode(ID)
-
-
-# 创建Remap节点并应用
-createRemap(totalIndex,'cmpt', totalFlipRemapLocator)
-conductRemap('cmpt', totalIndex, 'cmptCore')
-
-# 创建BS的Remap节点并应用
-for BSID in BSIDs:
-    createRemap(totalIndex,BSID, totalBSRemapLocator)
-    conductRemap(BSID, totalIndex, BSID)
-
-
-# 自动中间页 test only
+MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMiddles,totalBSs,totalFlipRemapLocator,totalBSRemapLocator)
 autoGuides()
 autoMiddles()
+
+# 分发材质
+path = r'E:\P\Magician\maya\sourceimages\MBTexture'
+prefix = ''
+suffix = '.jpg'
+BSDF = 'aiStandardSurface'
+roughness = 0.7
+assignPageShader(totalIndex, path, BSDF, roughness, prefix='', suffix='.jpg')
