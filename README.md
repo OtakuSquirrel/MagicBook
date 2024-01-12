@@ -35,7 +35,6 @@ maya\modules\dropToInstall.mel
 
 2. ***Reopen*** Maya, then drag and drop the file `dropToInstall.mel` to Maya's viewport, you should see a yuumi on your shelf, installation is done.
 
-
 ## How to install numpy and scipy
 
 
