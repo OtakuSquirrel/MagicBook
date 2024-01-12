@@ -1,7 +1,7 @@
 # MagicBook
 
 
-This is a useful tool that helps you create a full function book rig.
+This is a useful tool which helps you create a full function book rig.
 
 
 It is necessary to inform you that a ***numpy*** and ***scipy*** module is required!
