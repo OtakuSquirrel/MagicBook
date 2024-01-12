@@ -10,7 +10,7 @@ It is necessary to inform you that a ***numpy*** and ***scipy*** module is requi
 After you download the .zip file from the release page, you can install the plug-in by following the steps below:
 
 
-## How to install
+## How to install MagicBook
 
 
 1. Decompression the files to your `MAYA_APP_DIR\modules`, for me (on Windows) it is:
@@ -46,5 +46,11 @@ For Windows user, press ```Win``` + ```R```, type in ```cmd```, press ```Enter``
 
 
 Execute
+
+
 ```mayapy -m pip install numpy```
+
+
 ```mayapy -m pip install scipy```
+
+
