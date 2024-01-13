@@ -26,10 +26,10 @@ maya\modules\dropToInstall.mel
 ```
   If you are using Maya on Macintosh or Linux, it should be:
 ```
-~<userName>/Library/Preferences/Autodesk/Maya/modules
+Mac: ~<userName>/Library/Preferences/Autodesk/Maya/modules
 ```
 ```
-~<userName>/Maya/modules
+Linux: ~<userName>/Maya/modules
 ```
 
 
