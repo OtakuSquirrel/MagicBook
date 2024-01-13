@@ -24,13 +24,11 @@ maya\modules\MagicBook
 maya\modules\MagicBook.mod
 maya\modules\dropToInstall.mel
 ```
-  If you are using Maya on Macintosh or Linux, it should be:
-```
-Mac: ~<userName>/Library/Preferences/Autodesk/Maya/modules
-```
-```
-Linux: ~<userName>/Maya/modules
-```
+If you are using Maya on Macintosh or Linux, it should be:
+
+
+Mac: `~<userName>/Library/Preferences/Autodesk/Maya/modules`
+Linux: `~<userName>/Maya/modules`
 
 
 2. ***Reopen*** Maya, then drag and drop the file `dropToInstall.mel` to Maya's viewport, you should see a yuumi on your shelf, installation is done.
