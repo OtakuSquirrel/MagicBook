@@ -801,73 +801,164 @@ def createCloseAttr(width, cvsMaxIndex, guideIDs, totalMiddles):
 
 
 def find_files_in_folder(directory, prefix='', suffix=''):
-    all_files = os.listdir(directory)
-    filtered_files = [file for file in all_files if file.startswith(prefix) and file.endswith(suffix)]
-    file_paths = [os.path.join(directory, file) for file in filtered_files]
+    file_paths = []
+
+    # 递归函数，用于获取目录及其子目录下的所有文件路径
+    def get_all_files(current_directory):
+        all_files = os.listdir(current_directory)
+
+        for file in all_files:
+            file_path = os.path.join(current_directory, file)
+
+            if os.path.isfile(file_path) and file.startswith(prefix) and file.endswith(suffix):
+                file_paths.append(file_path)
+            elif os.path.isdir(file_path):
+                # 递归调用，处理子目录
+                get_all_files(file_path)
+
+    get_all_files(directory)
 
     return file_paths
 
 
-def doubleSideShader(shaderName, BSDF, textureFilePath1, textureFilePath2, roughness):
-    textureName1 = shaderName + '_T1'
-    textureName2 = shaderName + '_T2'
-    conditionName = shaderName + '_Con'
-    samplerInfoName = shaderName + '_Sam'
+def doubleSideShader(shaderName, BSDF, baseColor1, baseColor2, roughness1, roughness2, metalness1, metalness2):
+
+    sampleInfoName = shaderName + '_Sam'
+
+    baseColorName1 = shaderName + '_BaseColor1'
+    baseColorName2 = shaderName + '_BaseColor2'
+    baseColorCondition = baseColorName1 + '_Con'
+
+
+    roughnessName1 = shaderName + '_Roughness1'
+    roughnessName2 = shaderName + '_Roughness2'
+    roughnessCondition = roughnessName1 + '_Con'
+
+
+    metalnessName1 = shaderName + '_Metalness1'
+    metalnessName2 = shaderName + '_Metalness2'
+    metalnessCondition = metalnessName1 + '_Con'
+
+    deleteIfExist(sampleInfoName)
+
+    deleteIfExist(baseColorName1)
+    deleteIfExist(baseColorName2)
+    deleteIfExist(baseColorCondition)
+
+
+    deleteIfExist(roughnessName1)
+    deleteIfExist(roughnessName2)
+    deleteIfExist(roughnessCondition)
+
+
+    deleteIfExist(metalnessName1)
+    deleteIfExist(metalnessName2)
+    deleteIfExist(metalnessCondition)
+
 
     deleteIfExist(shaderName)
-    deleteIfExist(textureName1)
-    deleteIfExist(textureName2)
-    deleteIfExist(conditionName)
-    deleteIfExist(samplerInfoName)
-    # create nodes
+    # shader
     shader = cmds.shadingNode(BSDF, name=shaderName, asShader=True)
-    texture1 = cmds.shadingNode('file', name=textureName1, asTexture=True)
-    texture2 = cmds.shadingNode('file', name=textureName2, asTexture=True)
-    condition = cmds.shadingNode('condition', asUtility=True, name=conditionName)
-    samplerInfo = cmds.shadingNode('samplerInfo', asUtility=True, name=samplerInfoName)
+    samplerInfo = cmds.shadingNode('samplerInfo', asUtility=True, name=sampleInfoName)
+    # baseColor
+    texture1 = cmds.shadingNode('file', name=baseColorName1, asTexture=True)
+    texture2 = cmds.shadingNode('file', name=baseColorName2, asTexture=True)
+    condition = cmds.shadingNode('condition', asUtility=True, name=baseColorCondition)
 
-    # connect and set attribute
     cmds.connectAttr(f'{texture1}.outColor', f'{condition}.colorIfTrue')
     cmds.connectAttr(f'{texture2}.outColor', f'{condition}.colorIfFalse')
     cmds.connectAttr(f'{samplerInfo}.flippedNormal', f'{condition}.firstTerm')
     cmds.connectAttr(f'{condition}.outColor', f'{shader}.baseColor')
-    cmds.setAttr(f'{texture1}.fileTextureName', textureFilePath1, type='string')
-    cmds.setAttr(f'{texture2}.fileTextureName', textureFilePath2, type='string')
+    cmds.setAttr(f'{texture1}.fileTextureName', baseColor1, type='string')
+    cmds.setAttr(f'{texture2}.fileTextureName', baseColor2, type='string')
 
-    try:
-        roughnessf = float(roughness)
-        cmds.setAttr(f'{shader}.specularRoughness', roughnessf)
-    except:
-        textureRoughnessName = shaderName+'_r'
-        textureRoughness = cmds.shadingNode('file', name=textureRoughnessName, asTexture=True)
-        cmds.connectAttr(f'{textureRoughness}.outAlpha',f'{shader}.specularRoughness')
-        cmds.setAttr(f'{textureRoughness}.colorSpace', 'Raw', type='string')
-        cmds.setAttr(f'{textureRoughness}.ignoreColorSpaceFileRules', True)
-        cmds.setAttr(f'{textureRoughness}.alphaIsLuminance', True)
-        cmds.setAttr(f'{textureRoughness}.fileTextureName', roughness, type='string')
-# doubleSideShader('shaderName', 'aiStandardSurface', 'textureFilePath1', 'textureFilePath2', 'roughness')
+    # roughness
+    texture1 = cmds.shadingNode('file', name=roughnessName1, asTexture=True)
+    cmds.setAttr(f'{texture1}.colorSpace', 'Raw', type='string')
+    cmds.setAttr(f'{texture1}.ignoreColorSpaceFileRules', True)
+    cmds.setAttr(f'{texture1}.alphaIsLuminance', True)
+    texture2 = cmds.shadingNode('file', name=roughnessName2, asTexture=True)
+    cmds.setAttr(f'{texture2}.colorSpace', 'Raw', type='string')
+    cmds.setAttr(f'{texture2}.ignoreColorSpaceFileRules', True)
+    cmds.setAttr(f'{texture2}.alphaIsLuminance', True)
+    condition = cmds.shadingNode('condition', asUtility=True, name=roughnessCondition)
 
-def assignPageShader(totalIndex, path, BSDF, roughness, prefix='', suffix=''):
+    cmds.connectAttr(f'{texture1}.outAlpha', f'{condition}.colorIfTrueR')
+    cmds.connectAttr(f'{texture2}.outAlpha', f'{condition}.colorIfFalseR')
+    cmds.connectAttr(f'{samplerInfo}.flippedNormal', f'{condition}.firstTerm')
+    cmds.connectAttr(f'{condition}.outColorR', f'{shader}.specularRoughness')
+    cmds.setAttr(f'{texture1}.fileTextureName', roughness1, type='string')
+    cmds.setAttr(f'{texture2}.fileTextureName', roughness2, type='string')
+
+    # metalnessName
+    texture1 = cmds.shadingNode('file', name=metalnessName1, asTexture=True)
+    cmds.setAttr(f'{texture1}.colorSpace', 'Raw', type='string')
+    cmds.setAttr(f'{texture1}.ignoreColorSpaceFileRules', True)
+    cmds.setAttr(f'{texture1}.alphaIsLuminance', True)
+    texture2 = cmds.shadingNode('file', name=metalnessName2, asTexture=True)
+    cmds.setAttr(f'{texture2}.colorSpace', 'Raw', type='string')
+    cmds.setAttr(f'{texture2}.ignoreColorSpaceFileRules', True)
+    cmds.setAttr(f'{texture2}.alphaIsLuminance', True)
+    condition = cmds.shadingNode('condition', asUtility=True, name=metalnessCondition)
+
+    cmds.connectAttr(f'{texture1}.outAlpha', f'{condition}.colorIfTrueR')
+    cmds.connectAttr(f'{texture2}.outAlpha', f'{condition}.colorIfFalseR')
+    cmds.connectAttr(f'{samplerInfo}.flippedNormal', f'{condition}.firstTerm')
+    cmds.connectAttr(f'{condition}.outColorR', f'{shader}.metalness')
+    cmds.setAttr(f'{texture1}.fileTextureName', metalness1, type='string')
+    cmds.setAttr(f'{texture2}.fileTextureName', metalness2, type='string')
+
+#     try:
+#         roughnessf = float(roughness)
+#         cmds.setAttr(f'{shader}.specularRoughness', roughnessf)
+#     except:
+#         textureRoughnessName = shaderName+'_r'
+#         textureRoughness = cmds.shadingNode('file', name=textureRoughnessName, asTexture=True)
+#         cmds.connectAttr(f'{textureRoughness}.outAlpha',f'{shader}.specularRoughness')
+#         cmds.setAttr(f'{textureRoughness}.colorSpace', 'Raw', type='string')
+#         cmds.setAttr(f'{textureRoughness}.ignoreColorSpaceFileRules', True)
+#         cmds.setAttr(f'{textureRoughness}.alphaIsLuminance', True)
+#         cmds.setAttr(f'{textureRoughness}.fileTextureName', roughness, type='string')
+# doubleSideShader('shaderName', 'aiStandardSurface', r'sourceimages\MBTexture\001.jpg', r'sourceimages\MBTexture\002.jpg',
+#                  r'sourceimages\MBTexture\003.jpg', r'sourceimages\MBTexture\004.jpg',
+#                  r'sourceimages\MBTexture\005.jpg', r'sourceimages\MBTexture\006.jpg')
+
+def assignPageShader(totalIndex, path, BSDF, baseColorPrefix='', baseColorSuffix='',
+                     roughnessPrefix='', roughnessSuffix='',metalnessPrefix='', metalnessSuffix=''):
     for index in range(-totalIndex, totalIndex + 1):
         ID = indexToID(index)
         meshName = indexToMeshName(index)
         shaderID = IDToShaderID(ID)
         lIndex = index + totalIndex
-        file_paths = find_files_in_folder(path, prefix, suffix)
-        fileCount = len(file_paths)
-        if fileCount % 2:
+        baseColor_file_paths = find_files_in_folder(path, baseColorPrefix, baseColorSuffix)
+        roughness_file_paths = find_files_in_folder(path, roughnessPrefix, roughnessSuffix)
+        metalness_file_paths = find_files_in_folder(path, metalnessPrefix, metalnessSuffix)
+        baseColorFileCount = len(baseColor_file_paths)
+        roughnessFileCount = len(roughness_file_paths)
+        metalnessFileCount = len(metalness_file_paths)
+        if baseColorFileCount % 2 or roughnessFileCount % 2 or metalnessFileCount % 2:
+            cmds.error('Certaini File count is odd number')
             return
-        if lIndex < fileCount / 2:
-            filePath1 = file_paths[lIndex * 2]
-            filePath2 = file_paths[lIndex * 2 + 1]
-            doubleSideShader(shaderID, BSDF, filePath1, filePath2, roughness)
-            cmds.select(meshName)
-            cmds.hyperShade(shaderID, assign=shaderID)
-        else:
-            shaderID = IDToShaderID(indexToID(int(fileCount / 2 - totalIndex - 1)))
-            cmds.select(meshName)
-            cmds.hyperShade(shaderID, assign=shaderID)
-
+        if baseColorFileCount == 0 or roughnessFileCount == 0 or metalnessFileCount == 0:
+            cmds.error('Certain Texture file is blank')
+            return
+        # if lIndex < fileCount / 2:
+        #     filePath1 = file_paths[lIndex * 2]
+        #     filePath2 = file_paths[lIndex * 2 + 1]
+        #     doubleSideShader(shaderID, BSDF, filePath1, filePath2, roughness)
+        #     cmds.select(meshName)
+        #     cmds.hyperShade(shaderID, assign=shaderID)
+        # else:
+        #     shaderID = IDToShaderID(indexToID(int(fileCount / 2 - totalIndex - 1)))
+        #     cmds.select(meshName)
+        #     cmds.hyperShade(shaderID, assign=shaderID)
+        colorPath0 = baseColor_file_paths[min(lIndex * 2,baseColorFileCount-2)]
+        colorPath1 = baseColor_file_paths[min(lIndex * 2 + 1,baseColorFileCount-1)]
+        roughnessPath0 = roughness_file_paths[min(lIndex * 2,roughnessFileCount-2)]
+        roughnessPath1 = roughness_file_paths[min(lIndex * 2+1, roughnessFileCount - 1)]
+        metalnessPath0 = metalness_file_paths[min(lIndex * 2,metalnessFileCount-2)]
+        metalnessPath1 = metalness_file_paths[min(lIndex * 2+1, metalnessFileCount - 1)]
+        doubleSideShader(shaderID, BSDF, colorPath0, colorPath1, roughnessPath0, roughnessPath1,metalnessPath0, metalnessPath1)
 
 def MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMiddles,totalBSs,totalFlipRemapLocator,totalBSRemapLocator):
     shaderColorList = [(29, 43, 83), (126, 37, 83), (255, 0, 77), (250, 239, 93),  # cv controllers
@@ -922,28 +1013,28 @@ def MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMidd
         createRemap(totalIndex, BSID, totalBSRemapLocator)
         conductRemap(BSID, totalIndex, BSID)
 
-if __name__ == '__main__':
-    # 定义参数
-    totalIndex = 10
-    width = 10
-    height = 15
-    subDivWidth = 7
-    subDivHeight = 10
-    cvsMaxIndex = 4  # 修改这个会让自动放置失效
-    totalMiddles = 3  # 修改这个会让自动放置失效
-    totalBSs = 2
-    totalFlipRemapLocator = 4
-    totalBSRemapLocator = 3
-
-    # 创建Rig
-    MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMiddles,totalBSs,totalFlipRemapLocator,totalBSRemapLocator)
-    autoGuides()
-    autoMiddles()
-
-    # 分发材质
-    path = r''
-    prefix = ''
-    suffix = '.jpg'
-    BSDF = 'aiStandardSurface'
-    roughness = 0.7
-    assignPageShader(totalIndex, path, BSDF, roughness, prefix='', suffix='.jpg')
+# if __name__ == '__main__':
+#     # 定义参数
+#     totalIndex = 10
+#     width = 10
+#     height = 15
+#     subDivWidth = 7
+#     subDivHeight = 10
+#     cvsMaxIndex = 4  # 修改这个会让自动放置失效
+#     totalMiddles = 3  # 修改这个会让自动放置失效
+#     totalBSs = 2
+#     totalFlipRemapLocator = 4
+#     totalBSRemapLocator = 3
+#
+#     # 创建Rig
+#     MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMiddles,totalBSs,totalFlipRemapLocator,totalBSRemapLocator)
+#     autoGuides()
+#     autoMiddles()
+#
+#     # 分发材质
+#     path = r''
+#     prefix = ''
+#     suffix = '.jpg'
+#     BSDF = 'aiStandardSurface'
+#     roughness = 0.7
+#     assignPageShader(totalIndex, path, BSDF, roughness, prefix='', suffix='.jpg')

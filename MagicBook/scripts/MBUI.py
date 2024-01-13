@@ -56,11 +56,15 @@ def UI():
     child2 = cmds.columnLayout("PageShaderLayout", adjustableColumn=True, columnAlign="center")
 
     # 创建输入字段
+    totalIndex = cmds.intFieldGrp(label="totalIndex = ", value1=10, adjustableColumn2=2)
     path = cmds.textFieldGrp(label="path = ", text=r'', adjustableColumn2=2)
-    prefix = cmds.textFieldGrp(label="prefix = ", text='', adjustableColumn2=2)
-    suffix = cmds.textFieldGrp(label="suffix = ", text='.jpg', adjustableColumn2=2)
     BSDF = cmds.textFieldGrp(label="BSDF = ", text='aiStandardSurface', adjustableColumn2=2)
-    roughness = cmds.textFieldGrp(label="roughness = ", adjustableColumn2=2)
+    cprefix = cmds.textFieldGrp(label="color prefix = ", text='c_', adjustableColumn2=2)
+    csuffix = cmds.textFieldGrp(label="color suffix = ", text='.jpg', adjustableColumn2=2)
+    rprefix = cmds.textFieldGrp(label="roughness prefix = ", text='r_', adjustableColumn2=2)
+    rsuffix = cmds.textFieldGrp(label="roughness suffix = ", text='.jpg', adjustableColumn2=2)
+    mprefix = cmds.textFieldGrp(label="metalness prefix = ", text='m_', adjustableColumn2=2)
+    msuffix = cmds.textFieldGrp(label="metalness suffix = ", text='.jpg', adjustableColumn2=2)
 
     # 创建按钮
     cmds.button(label="Execute",
@@ -68,9 +72,12 @@ def UI():
                     cmds.intFieldGrp(totalIndex, query=True, value1=True),
                     cmds.textFieldGrp(path, query=True, text=True),
                     cmds.textFieldGrp(BSDF, query=True, text=True),
-                    cmds.textFieldGrp(roughness, query=True, text=True),
-                    cmds.textFieldGrp(prefix, query=True, text=True),
-                    cmds.textFieldGrp(suffix, query=True, text=True)
+                    cmds.textFieldGrp(cprefix, query=True, text=True),
+                    cmds.textFieldGrp(csuffix, query=True, text=True),
+                    cmds.textFieldGrp(rprefix, query=True, text=True),
+                    cmds.textFieldGrp(rsuffix, query=True, text=True),
+                    cmds.textFieldGrp(mprefix, query=True, text=True),
+                    cmds.textFieldGrp(msuffix, query=True, text=True)
                 ))
 
     cmds.setParent('..')
