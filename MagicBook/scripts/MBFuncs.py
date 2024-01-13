@@ -266,7 +266,7 @@ def createRigTree():
     cmds.createNode('transform', n=levelName, p=parentName)
 
     levelName = 'RemapController'
-    parentName = 'Main'
+    parentName = 'MagicBookGrp'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
@@ -725,7 +725,7 @@ def createRemap(totalIndex, ID, totalLocator):
         cmds.parent(remapControllerLoc, 'RemapController')
         xValue = iindex / totalLocator / 2 + 0.5
         cmds.setAttr(f'{remapControllerLoc}.tx', iindex / (totalLocator - 1))
-        cmds.setAttr(f'{remapControllerLoc}.ty', 0.5)
+        cmds.setAttr(f'{remapControllerLoc}.ty', 0.0)
         cmds.connectAttr(f'{remapControllerLoc}.translate', f'{remapNode}.locator[{iindex}]')
         cmds.parent(remapControllerLoc, fence)
         cmds.setAttr(f'{remapControllerLoc}.tz', lock=True)

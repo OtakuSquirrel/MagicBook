@@ -29,7 +29,7 @@ def UI():
     totalMiddles = cmds.intFieldGrp(label="totalMiddles = ", value1=3, adjustableColumn2=2)
     totalBSs = cmds.intFieldGrp(label="totalBSs = ", value1=2, adjustableColumn2=2)
     totalFlipRemapLocator = cmds.intFieldGrp(label="totalFlipRemapLocator = ", value1=4, adjustableColumn2=2)
-    totalBSRemapLocator = cmds.intFieldGrp(label="totalBSRemapLocator = ", value1=3, adjustableColumn2=2)
+    totalBSRemapLocator = cmds.intFieldGrp(label="totalBSRemapLocator = ", value1=5, adjustableColumn2=2)
 
     # 创建按钮
     cmds.button(label="Execute",
@@ -47,8 +47,8 @@ def UI():
                 )
                 )
 
-    cmds.button(label='AutoGuides',command=lambda *args: MBFuncs.autoGuides())
-    cmds.button(label='AutoMiddles', command=lambda *args: MBFuncs.autoMiddles())
+    cmds.button(label='AutoGuides(Only work with default value)',command=lambda *args: MBFuncs.autoGuides())
+    cmds.button(label='AutoMiddles(Only work with default value)', command=lambda *args: MBFuncs.autoMiddles())
 
     cmds.setParent('..')
 
