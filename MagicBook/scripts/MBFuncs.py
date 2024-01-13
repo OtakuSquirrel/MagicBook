@@ -110,7 +110,7 @@ def crvNameToIndex(crvName):
 
 
 def crvNameToID(crvName):
-    return crvName[8:]
+    return crvName[7:]
 
 
 def indexToIKHandleName(index):
@@ -384,52 +384,61 @@ def createController(ID, width, cvsMaxIndex=4):
     curveName = IDToCrvName(ID)
     curveShapeName = IDToCrvShapeName(ID)
     cvsList = getCVsPosList(cvsMaxIndex, width)
+
     for i in range(cvsMaxIndex):
         controlerName_suffix = controlerName + '_' + str(i)
-        cmds.createNode('joint', name=controlerName_suffix)
-        plugHandle = '.tx'
-        cmds.setAttr(controlerName_suffix + plugHandle, cvsList[i][0])
-        plugHandle = '.ty'
-        cmds.setAttr(controlerName_suffix + plugHandle, cvsList[i][1])
-        plugHandle = '.tz'
-        cmds.setAttr(controlerName_suffix + plugHandle, cvsList[i][2])
-        plugHandle = '.rz'
-        cmds.setAttr(controlerName_suffix + plugHandle, 90)
-        cmds.makeIdentity(controlerName_suffix, apply=True, rotate=True, scale=True, translate=False)
-        cmds.parent(controlerName_suffix, curveName)
+        jointName = controlerName + '_Joint' + str(i)
+        vectorProductName = controlerName + '_Vector' + str(i)
+        jointOffsetGrpName = jointName +'_OffsetGrp'
+        cmds.group( em=True, name=jointOffsetGrpName)
+        cmds.createNode('joint', name=jointName)
+        cmds.parent(jointName,jointOffsetGrpName)
+        # plugHandle = '.rz'
+        # cmds.setAttr(jointName + plugHandle, 90)
+        cmds.makeIdentity(jointName, apply=True, rotate=True, scale=True, translate=True)
         cmds.delete(constructionHistory=True)
+
+        plugHandle = '.ty'
+        cmds.setAttr(jointOffsetGrpName + plugHandle, cvsList[i][1])
+
+        cmds.parent(jointOffsetGrpName, curveName)
+
+        vectorProduct = cmds.createNode('vectorProduct',name = vectorProductName)
+        plugHandle = '.input1X'
+        cmds.setAttr(vectorProduct + plugHandle, cvsList[i][0])
+        plugHandle = '.input1Y'
+        cmds.setAttr(vectorProduct + plugHandle, cvsList[i][1])
+        plugHandle = '.input1Z'
+        cmds.setAttr(vectorProduct + plugHandle, cvsList[i][2])
+
+
+        plusMinusAverage=cmds.createNode('plusMinusAverage', name=controlerName_suffix)
+
+        cmds.connectAttr(f'{jointName}.translate',f'{plusMinusAverage}.input3D[0]')
+        cmds.connectAttr(f'{vectorProduct}.input1',f'{plusMinusAverage}.input3D[1]')
+
         shapeNodePlug = f'.controlPoints[{i}]'
 
-        plugHandle = '.tx'
-        dsPlugHandle = '.xValue'
+        plugHandle = '.output3D'
+        # dsPlugHandle = '.xValue'
 
-        cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
+        cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug)
 
-        plugHandle = '.ty'
-        dsPlugHandle = '.yValue'
-        cmds.connectAttr(controlerName_suffix + plugHandle, curveShapeName + shapeNodePlug + dsPlugHandle)
 
         plugHandle = '.tz'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True)
+        cmds.setAttr(jointName + plugHandle, lock=True)
         plugHandle = '.rx'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        cmds.setAttr(jointName + plugHandle, lock=True, keyable=False, channelBox=False)
         plugHandle = '.ry'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        cmds.setAttr(jointName + plugHandle, lock=True, keyable=False, channelBox=False)
         plugHandle = '.rz'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        cmds.setAttr(jointName + plugHandle, lock=True, keyable=False, channelBox=False)
         plugHandle = '.sx'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        cmds.setAttr(jointName + plugHandle, lock=True, keyable=False, channelBox=False)
         plugHandle = '.sy'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
+        cmds.setAttr(jointName + plugHandle, lock=True, keyable=False, channelBox=False)
         plugHandle = '.sz'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
-        plugHandle = '.v'
-        cmds.setAttr(controlerName_suffix + plugHandle, lock=True, keyable=False, channelBox=False)
-        try:
-            cmds.setAttr(f'{controlerName_suffix}.overrideEnabled', True)
-            cmds.setAttr(f'{controlerName_suffix}.overrideColor', i + 14)
-        except:
-            pass
+        cmds.setAttr(jointName + plugHandle, lock=True, keyable=False, channelBox=False)
 
 
 def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
@@ -448,6 +457,8 @@ def createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex):
         bindSkin(ID)
         injectJntWeight(ID, subDivWidth, subDivHeight)
         createCVCurve(ID, width, cvsMaxIndex)
+        cmds.setAttr(f'{IDToCrvName(ID)}.overrideEnabled', True)
+        cmds.setAttr(f'{IDToCrvName(ID)}.overrideColor', 17+i)
         crvName = IDToCrvName(ID)
         cmds.parent(crvName, 'GuideCurveGrp')
         createIKHandle(ID, subDivWidth)
@@ -543,64 +554,68 @@ def resetControler(ID, cvsMaxIndex, width):
         cmds.setAttr(f'{controler}.tx', cvsPosList[cvsIndex][0])
         cmds.setAttr(f'{controler}.ty', cvsPosList[cvsIndex][1])
 
+def resetSelectedControler(cvsMaxIndex, width):
+
+    selection = cmds.ls(selection=True)
+    for crv in selection:
+        if crv[:6] == 'MB_Crv':
+            ID = crvNameToID(crv)
+            resetControler(ID, cvsMaxIndex, width)
 
 # 自动引导 test only
 def autoGuides():
-    cmds.setAttr('MB_Controller_LL_0.tx', 0)
-    cmds.setAttr('MB_Controller_LL_0.ty', 0)
-    cmds.setAttr('MB_Controller_LL_1.tx', -2)
-    cmds.setAttr('MB_Controller_LL_1.ty', 1)
-    cmds.setAttr('MB_Controller_LL_2.tx', -6)
-    cmds.setAttr('MB_Controller_LL_2.ty', 1)
-    cmds.setAttr('MB_Controller_LL_3.tx', -10)
-    cmds.setAttr('MB_Controller_LL_3.ty', 0)
+    #MB_Controller_Mid2_Joint3
 
-    cmds.setAttr('MB_Controller_LR_0.tx', 0)
-    cmds.setAttr('MB_Controller_LR_0.ty', 0)
-    cmds.setAttr('MB_Controller_LR_1.tx', -1)
-    cmds.setAttr('MB_Controller_LR_1.ty', 2)
-    cmds.setAttr('MB_Controller_LR_2.tx', -4)
-    cmds.setAttr('MB_Controller_LR_2.ty', 3)
-    cmds.setAttr('MB_Controller_LR_3.tx', -9)
-    cmds.setAttr('MB_Controller_LR_3.ty', 1)
+    cmds.setAttr('MB_Controller_LL_Joint1.tx', -2)
+    cmds.setAttr('MB_Controller_LL_Joint1.ty', -2.333)
+    cmds.setAttr('MB_Controller_LL_Joint2.tx', -5)
+    cmds.setAttr('MB_Controller_LL_Joint2.ty', -5.667)
+    cmds.setAttr('MB_Controller_LL_Joint3.tx', -11)
+    cmds.setAttr('MB_Controller_LL_Joint3.ty', -10)
 
-    cmds.setAttr('MB_Controller_RL_0.tx', 0)
-    cmds.setAttr('MB_Controller_RL_0.ty', 0)
-    cmds.setAttr('MB_Controller_RL_1.tx', 1)
-    cmds.setAttr('MB_Controller_RL_1.ty', 2)
-    cmds.setAttr('MB_Controller_RL_2.tx', 4)
-    cmds.setAttr('MB_Controller_RL_2.ty', 3)
-    cmds.setAttr('MB_Controller_RL_3.tx', 9)
-    cmds.setAttr('MB_Controller_RL_3.ty', 1)
 
-    cmds.setAttr('MB_Controller_RR_0.tx', 0)
-    cmds.setAttr('MB_Controller_RR_0.ty', 0)
-    cmds.setAttr('MB_Controller_RR_1.tx', 2)
-    cmds.setAttr('MB_Controller_RR_1.ty', 1)
-    cmds.setAttr('MB_Controller_RR_2.tx', 6)
-    cmds.setAttr('MB_Controller_RR_2.ty', 1)
-    cmds.setAttr('MB_Controller_RR_3.tx', 10)
-    cmds.setAttr('MB_Controller_RR_3.ty', 0)
+    cmds.setAttr('MB_Controller_LR_Joint1.tx', 0)
+    cmds.setAttr('MB_Controller_LR_Joint1.ty', -0.333)
+    cmds.setAttr('MB_Controller_LR_Joint2.tx', -5)
+    cmds.setAttr('MB_Controller_LR_Joint2.ty', -3.667)
+    cmds.setAttr('MB_Controller_LR_Joint3.tx', -9)
+    cmds.setAttr('MB_Controller_LR_Joint3.ty', -9)
+
+    cmds.setAttr('MB_Controller_RR_Joint1.tx', 2)
+    cmds.setAttr('MB_Controller_RR_Joint1.ty', -2.333)
+    cmds.setAttr('MB_Controller_RR_Joint2.tx', 5)
+    cmds.setAttr('MB_Controller_RR_Joint2.ty', -5.667)
+    cmds.setAttr('MB_Controller_RR_Joint3.tx', 11)
+    cmds.setAttr('MB_Controller_RR_Joint3.ty', -10)
+
+    cmds.setAttr('MB_Controller_RL_Joint1.tx', 0)
+    cmds.setAttr('MB_Controller_RL_Joint1.ty', -0.333)
+    cmds.setAttr('MB_Controller_RL_Joint2.tx', 5)
+    cmds.setAttr('MB_Controller_RL_Joint2.ty', -3.667)
+    cmds.setAttr('MB_Controller_RL_Joint3.tx', 9)
+    cmds.setAttr('MB_Controller_RL_Joint3.ty', -9)
 
 
 def autoMiddles():
-    cmds.setAttr('MB_Controller_Mid0_0.tx', 0)
-    cmds.setAttr('MB_Controller_Mid0_0.ty', 0)
-    cmds.setAttr('MB_Controller_Mid0_1.tx', -2)
-    cmds.setAttr('MB_Controller_Mid0_1.ty', 3)
-    cmds.setAttr('MB_Controller_Mid0_2.tx', -5)
-    cmds.setAttr('MB_Controller_Mid0_2.ty', 5)
-    cmds.setAttr('MB_Controller_Mid0_3.tx', -6)
-    cmds.setAttr('MB_Controller_Mid0_3.ty', 8)
 
-    cmds.setAttr('MB_Controller_Mid2_0.tx', 0)
-    cmds.setAttr('MB_Controller_Mid2_0.ty', 0)
-    cmds.setAttr('MB_Controller_Mid2_1.tx', 2)
-    cmds.setAttr('MB_Controller_Mid2_1.ty', 3)
-    cmds.setAttr('MB_Controller_Mid2_2.tx', 5)
-    cmds.setAttr('MB_Controller_Mid2_2.ty', 5)
-    cmds.setAttr('MB_Controller_Mid2_3.tx', 6)
-    cmds.setAttr('MB_Controller_Mid2_3.ty', 8)
+    cmds.setAttr('MB_Controller_Mid0_Joint1.tx', 0)
+    cmds.setAttr('MB_Controller_Mid0_Joint1.ty', -0.333)
+    cmds.setAttr('MB_Controller_Mid0_Joint2.tx', -4)
+    cmds.setAttr('MB_Controller_Mid0_Joint2.ty', -1.667)
+    cmds.setAttr('MB_Controller_Mid0_Joint3.tx', -5)
+    cmds.setAttr('MB_Controller_Mid0_Joint3.ty', 0)
+
+    cmds.setAttr('MB_Controller_Mid1_Joint1.tx', 1)
+    cmds.setAttr('MB_Controller_Mid1_Joint1.ty', -0.333)
+    cmds.setAttr('MB_Controller_Mid1_Joint2.tx', -2)
+    cmds.setAttr('MB_Controller_Mid1_Joint2.ty', -0.333)
+
+    cmds.setAttr('MB_Controller_Mid2_Joint1.tx', 0)
+    cmds.setAttr('MB_Controller_Mid2_Joint1.ty', -0.333)
+    cmds.setAttr('MB_Controller_Mid2_Joint2.tx', 4)
+    cmds.setAttr('MB_Controller_Mid2_Joint2.ty', -1.667)
+    cmds.setAttr('MB_Controller_Mid2_Joint3.tx', 5)
+    cmds.setAttr('MB_Controller_Mid2_Joint3.ty', 0)
 
 
 def createCmptCore(index, totalIndex, totalMiddles, cvsMaxIndex):
@@ -617,19 +632,25 @@ def createCmptCore(index, totalIndex, totalMiddles, cvsMaxIndex):
         guideController = IDToControlerName(guideID)
         for j in range(cvsMaxIndex):
             t = cvsMaxIndex * i + j
-            cmds.connectAttr(f'{guideController}_{j}.translate', f'{cmptCoreName}.iGuidePCG[{t}]')
-
+            try:
+                cmds.connectAttr(f'{guideController}_{j}.output3D', f'{cmptCoreName}.iGuidePCG[{t}]')
+            except:
+                pass
     MiddleIDs = indexToMiddleIDs(totalMiddles)
     for i, middleID in enumerate(MiddleIDs):
         middleController = IDToControlerName(middleID)
         for j in range(cvsMaxIndex):
             t = cvsMaxIndex * i + j
-            cmds.connectAttr(f'{middleController}_{j}.translate', f'{cmptCoreName}.iMiddlePCG[{t}]')
-
+            try:
+                cmds.connectAttr(f'{middleController}_{j}.output3D', f'{cmptCoreName}.iMiddlePCG[{t}]')
+            except:
+                pass
     pageController = IDToControlerName(ID)
     for i in range(cvsMaxIndex):
         pageControllersuffix = addSuffix(pageController, i)
-        cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]', f'{pageControllersuffix}.translate')
+
+        vectorProduct = pageController+'_Vector'+str(i)
+        cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]', f'{vectorProduct}.input1')
 
 
 def createBookSpineCurve():
@@ -950,8 +971,7 @@ def assignPageShader(totalIndex, path, BSDF, baseColorPrefix='', baseColorSuffix
         #     cmds.hyperShade(shaderID, assign=shaderID)
         # else:
         #     shaderID = IDToShaderID(indexToID(int(fileCount / 2 - totalIndex - 1)))
-        #     cmds.select(meshName)
-        #     cmds.hyperShade(shaderID, assign=shaderID)
+
         colorPath0 = baseColor_file_paths[min(lIndex * 2,baseColorFileCount-2)]
         colorPath1 = baseColor_file_paths[min(lIndex * 2 + 1,baseColorFileCount-1)]
         roughnessPath0 = roughness_file_paths[min(lIndex * 2,roughnessFileCount-2)]
@@ -959,6 +979,9 @@ def assignPageShader(totalIndex, path, BSDF, baseColorPrefix='', baseColorSuffix
         metalnessPath0 = metalness_file_paths[min(lIndex * 2,metalnessFileCount-2)]
         metalnessPath1 = metalness_file_paths[min(lIndex * 2+1, metalnessFileCount - 1)]
         doubleSideShader(shaderID, BSDF, colorPath0, colorPath1, roughnessPath0, roughnessPath1,metalnessPath0, metalnessPath1)
+
+        cmds.select(meshName)
+        cmds.hyperShade(shaderID, assign=shaderID)
 
 def MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMiddles,totalBSs,totalFlipRemapLocator,totalBSRemapLocator):
     shaderColorList = [(29, 43, 83), (126, 37, 83), (255, 0, 77), (250, 239, 93),  # cv controllers
