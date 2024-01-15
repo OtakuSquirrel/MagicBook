@@ -22,7 +22,6 @@ Things should be like:
 ```
 maya\modules\MagicBook
 maya\modules\MagicBook.mod
-maya\modules\dropToInstall.mel
 ```
 If you are using Maya on Macintosh or Linux, it should be:
 
