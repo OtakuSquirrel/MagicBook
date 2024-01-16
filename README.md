@@ -1,6 +1,17 @@
 # MagicBook
 
 
+## Tutorial
+
+
+```
+https://youtu.be/_ABUKFHq3Kg
+```
+```
+https://www.bilibili.com/video/BV1ja4y127Fm/
+```
+
+
 This is a useful tool which helps you create a full function book rig.
 
 
