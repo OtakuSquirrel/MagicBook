@@ -54,7 +54,19 @@ For Windows user, press `Win` + `R`, type in `cmd`, press `Enter`.
 `cd` to your Maya installation directory. If Maya is installed in `D:\...`, type in `D:` first, then `cd` to where Maya locates.
 
 
-Execute:
+Then `cd bin`
+
+
+Generally, it is:
+
+
+`D:`
+
+
+`cd Program Files\Autodesk\Maya2023\bin`
+
+
+Then execute:
 
 
 ```mayapy -m pip install numpy```
