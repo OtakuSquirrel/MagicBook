@@ -8,9 +8,9 @@ English
 ```
 https://vimeo.com/manage/videos/915469397
 ```
-
-~~https://youtu.be/_ABUKFHq3Kg~~ My YouTube account has been blocked (Mad)
-
+```
+https://youtu.be/_ABUKFHq3Kg
+```
 
 Chinese
 ```
