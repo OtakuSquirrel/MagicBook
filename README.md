@@ -54,6 +54,9 @@ Linux: `~<userName>/Maya/modules`
 ## How to install numpy and scipy
 
 
+The MagicBook plugin is developed with ***numpy1.26.3*** and ***scipy1.11.4***, but higher/latest version should work fine as well.
+
+
 For Windows user, press `Win` + `R`, type in `cmd`, press `Enter`.
 
 
