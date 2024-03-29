@@ -23,6 +23,10 @@ This is a useful tool which helps you create a full function book rig.
 
 It is necessary to inform you that a ***numpy*** and ***scipy*** module is required!
 
+The plug-in is written in Python3 so please use Maya2020-py3 / Maya2022+.
+
+I code and test it in Maya2023.
+
 
 After you download the .zip file from the release page, you can install the plug-in by following the steps below:
 
