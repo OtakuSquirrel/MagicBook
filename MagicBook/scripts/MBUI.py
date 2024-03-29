@@ -1,7 +1,8 @@
 import maya.cmds as cmds
 import importlib
-def UI():
 
+
+def UI():
     import MBFuncs
     importlib.reload(MBFuncs)
 
@@ -28,7 +29,7 @@ def UI():
     cvsMaxIndex = cmds.intFieldGrp(label="cvsMaxIndex = ", value1=4, adjustableColumn2=2)
     totalMiddles = cmds.intFieldGrp(label="totalMiddles = ", value1=3, adjustableColumn2=2)
     totalBSs = cmds.intFieldGrp(label="totalBSs = ", value1=2, adjustableColumn2=2)
-    totalFlipRemapLocator = cmds.intFieldGrp(label="totalFlipRemapLocator = ", value1=4, adjustableColumn2=2)
+    totalFlipRemapLocator = cmds.intFieldGrp(label="totalFlipRemapLocator = ", value1=6, adjustableColumn2=2)
     totalBSRemapLocator = cmds.intFieldGrp(label="totalBSRemapLocator = ", value1=5, adjustableColumn2=2)
 
     # 创建按钮
@@ -47,16 +48,21 @@ def UI():
                 )
                 )
 
-    cmds.button(label='AutoGuides(Only work with default value)',command=lambda *args: MBFuncs.autoGuides())
+    cmds.button(label='AutoGuides(Only work with default value)', command=lambda *args: MBFuncs.autoGuides())
     cmds.button(label='AutoMiddles(Only work with default value)', command=lambda *args: MBFuncs.autoMiddles())
-
+    # cmds.button(label='reset selected controllers',
+    #             command=lambda *args: MBFuncs.resetSelectedControler(
+    #                 cmds.intFieldGrp(cvsMaxIndex, query=True, value1=True),
+    #                 cmds.floatFieldGrp(width, query=True, value1=True)
+    #                 )
+    #             )
     cmds.setParent('..')
 
     # 创建第二个标签页
     child2 = cmds.columnLayout("PageShaderLayout", adjustableColumn=True, columnAlign="center")
 
     # 创建输入字段
-    totalIndex = cmds.intFieldGrp(label="totalIndex = ", value1=10, adjustableColumn2=2)
+    pageTotalIndex = cmds.intFieldGrp(label="totalIndex = ", value1=10, adjustableColumn2=2)
     path = cmds.textFieldGrp(label="path = ", text=r'', adjustableColumn2=2)
     BSDF = cmds.textFieldGrp(label="BSDF = ", text='aiStandardSurface', adjustableColumn2=2)
     cprefix = cmds.textFieldGrp(label="color prefix = ", text='c_', adjustableColumn2=2)
@@ -69,7 +75,7 @@ def UI():
     # 创建按钮
     cmds.button(label="Execute",
                 command=lambda *args: MBFuncs.assignPageShader(
-                    cmds.intFieldGrp(totalIndex, query=True, value1=True),
+                    cmds.intFieldGrp(pageTotalIndex, query=True, value1=True),
                     cmds.textFieldGrp(path, query=True, text=True),
                     cmds.textFieldGrp(BSDF, query=True, text=True),
                     cmds.textFieldGrp(cprefix, query=True, text=True),
@@ -81,8 +87,6 @@ def UI():
                 ))
 
     cmds.setParent('..')
-
-
 
     # 添加标签页
     cmds.tabLayout(tabs, edit=True, tabLabel=((child1, 'MBRig'), (child2, 'PageShader')))
