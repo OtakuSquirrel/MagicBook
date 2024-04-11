@@ -182,6 +182,30 @@ def IDToRemapControllerLoc(ID):
 def indexRange(totalIndex):
     return range(-1 * totalIndex, totalIndex + 1)
 
+def createCountNode(totalIndex):
+    nodeName = "MB_Count"
+    nodeVectorName = 'MB_Count_V'
+    nodeOneDivideVectorName = "MB_Count_1D_V"
+    count = totalIndex*2+1
+    # deleteIfExist(nodeName)
+    countNode=cmds.createNode("addDoubleLinear", n=nodeName)
+    cmds.setAttr(countNode + '.input1', count)
+
+    countVectorNode = cmds.createNode('multiplyDivide',n=nodeVectorName)
+    cmds.connectAttr(nodeName+'.output',countVectorNode+'.input1X')
+    cmds.connectAttr(nodeName + '.output', countVectorNode + '.input1Y')
+    cmds.connectAttr(nodeName + '.output', countVectorNode + '.input1Z')
+
+    count1DivideVectorNode = cmds.createNode('multiplyDivide', n=nodeOneDivideVectorName)
+    cmds.setAttr(count1DivideVectorNode+'.input1X',1)
+    cmds.setAttr(count1DivideVectorNode + '.input1Y', 1)
+    cmds.setAttr(count1DivideVectorNode + '.input1Z', 1)
+    cmds.connectAttr(nodeName + '.output', count1DivideVectorNode + '.input2X')
+    cmds.connectAttr(nodeName + '.output', count1DivideVectorNode + '.input2Y')
+    cmds.connectAttr(nodeName + '.output', count1DivideVectorNode + '.input2Z')
+    cmds.setAttr(count1DivideVectorNode+'.operation',2)
+
+
 
 def createMBShader(colorList):
     rampfix = []
@@ -234,34 +258,59 @@ def createRigTree():
     parentName = 'MagicBookGrp'
     deleteIfExist(levelName)
     cmds.circle(n=levelName, normal=[0, 1, 0], radius=10)
-    # cmds.addAttr()
+    cmds.select(levelName)
+    cmds.addAttr(longName='BsVis', at='bool', keyable=True)
+    cmds.setAttr(f'{levelName}.BsVis',1)
+    cmds.addAttr(longName='PageVis', at='bool', keyable=True)
+    cmds.setAttr(f'{levelName}.PageVis', 1)
+    cmds.addAttr(longName='GuideVis', at='bool', keyable=True)
+    cmds.setAttr(f'{levelName}.GuideVis', 1)
+    cmds.addAttr(longName='GuideCtrlVis', at='bool', keyable=True)
+    cmds.setAttr(f'{levelName}.GuideCtrlVis', 1)
+    cmds.parent(levelName, parentName)
+
+
+    levelName = 'Local'
+    parentName = 'Main'
+    deleteIfExist(levelName)
+    cmds.circle(n=levelName, normal=[0, 1, 0], radius=8)
+    cmds.setAttr('LocalShape.overrideEnabled',1)
+    cmds.setAttr('LocalShape.overrideColor', 20)
+    cmds.parent(levelName, parentName)
+
+    levelName = 'subTrans'
+    parentName = 'Local'
+    deleteIfExist(levelName)
+    cmds.circle(n=levelName, normal=[0, 1, 0], radius=4)
+    cmds.setAttr('subTransShape.overrideEnabled', 1)
+    cmds.setAttr('subTransShape.overrideColor', 12)
     cmds.parent(levelName, parentName)
 
     levelName = 'PageGeo'
-    parentName = 'Main'
+    parentName = 'subTrans'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('PageGeo.inheritsTransform', False)
 
     levelName = 'GuideGeo'
-    parentName = 'Main'
+    parentName = 'subTrans'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('GuideGeo.inheritsTransform', False)
 
     levelName = 'PagesCurveGrp'
-    parentName = 'Main'
+    parentName = 'subTrans'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('PagesCurveGrp.v', False)
 
     levelName = 'GuideCurveGrp'
-    parentName = 'Main'
+    parentName = 'subTrans'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
     levelName = 'BookSpine'
-    parentName = 'Main'
+    parentName = 'subTrans'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
@@ -276,7 +325,7 @@ def createRigTree():
     cmds.createNode('transform', n=levelName, p=parentName)
 
     levelName = 'DeformationSystem'
-    parentName = 'Main'
+    parentName = 'subTrans'
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
 
@@ -291,6 +340,14 @@ def createRigTree():
     deleteIfExist(levelName)
     cmds.createNode('transform', n=levelName, p=parentName)
     cmds.setAttr('JntGrp.v', False)
+
+    cmds.connectAttr('Main.BsVis','BSGrp.v')
+    cmds.connectAttr('Main.PageVis', 'PageGeo.v')
+    cmds.connectAttr('Main.GuideVis', 'GuideGeo.v')
+    cmds.connectAttr('Main.GuideCtrlVis', 'GuideCurveGrp.v')
+
+
+
 
 
 def createMesh(ID, width, height, subDivWidth, subDivHeight):
@@ -653,7 +710,7 @@ def createCmptCore(index, totalIndex, totalMiddles, cvsMaxIndex):
         cmds.connectAttr(f'{cmptCoreName}.oPCG[{i}]', f'{vectorProduct}.input1')
 
 
-def createBookSpineCurve():
+def createBookSpineCurve(height):
     bookSpineCurve = 'MB_BookSpine_Curve'
     deleteIfExist(bookSpineCurve)
     bookSpineCurve = cmds.curve(name=bookSpineCurve, p=[[-1, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0]])
@@ -700,6 +757,28 @@ def createBookSpineCurve():
     cmds.setAttr(f'{cvsGrp}.tz', 8)
     cmds.setAttr(f'{bookSpineCurve}.tz', 8)
 
+    cmds.select(bookSpineCurve)
+    curve1 = cmds.duplicate(bookSpineCurve, rr=True, renameChildren=True, ic=True)
+    curve2 = cmds.duplicate(bookSpineCurve, rr=True, renameChildren=True, ic=True)
+    cmds.setAttr(f'{curve1[0]}.tz',-1 * height/2)
+    cmds.setAttr(f'{curve2[0]}.tz', height / 2)
+    cmds.setAttr('MB_BookSpline_CV_3.tx',0.1)
+
+    # 使用cmds.loft命令创建几何体
+    splineNURBSFace = cmds.loft('MB_BookSpine_Curve2', 'MB_BookSpine_Curve1',ch=True,rn=True, ar=True,n='splineNURBSFace')
+    cmds.parent('splineNURBSFace','BookSpine')
+    cmds.hide(splineNURBSFace)
+    # cmds.select(splineNURBSFace, replace=True)
+    splinePoly = cmds.nurbsToPoly('splineNURBSFace',ch=1,n='splinePoly')
+    cmds.parent('splinePoly', 'BookSpine')
+    tesA = cmds.listConnections('splinePolyShape', source=True, destination=False, plugs=False)
+    tes = tesA[0]
+    cmds.setAttr(f'{tes}.format',2)
+    cmds.setAttr(f'{tes}.polygonType', 1)
+    cmds.setAttr(f'{tes}.un', 5)
+    cmds.setAttr(f'{tes}.vn', 12)
+    cmds.polyExtrudeFacet('splinePoly.f[*]',tk=0.05)
+
 
 def createPointOnCurveNode(ID):
     spineCurve = 'MB_BookSpine_Curve'
@@ -722,7 +801,8 @@ def createRemap(totalIndex, ID, totalLocator):
     # create fence
     fence = f'MB_{ID}_Fence'
     deleteIfExist(fence)
-    cmds.curve(name=fence, d=1, p=[(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0), (0, 0, 0)])
+    lenth = totalIndex * 2 + 1
+    cmds.curve(name=fence, d=1, p=[(0, 0, 0), (lenth, 0, 0), (lenth, lenth, 0), (0, lenth, 0), (0, 0, 0)])
     cmds.setAttr(f'{fence}.overrideEnabled', True)
     cmds.setAttr(f'{fence}.overrideColor', 17)
     cmds.parent(fence, 'RemapController')
@@ -741,13 +821,18 @@ def createRemap(totalIndex, ID, totalLocator):
     for iindex in range(totalLocator):
         # iID = indexToID(iindex)
         remapControllerLoc = ID + str(iindex)
+        remapControllerLocNormalize = ID + str(iindex) + "_N"
         foreRemapControllerLoc = ID + str(iindex - 1)
         cmds.createNode('joint', n=remapControllerLoc)
         cmds.parent(remapControllerLoc, 'RemapController')
+        cmds.createNode('multiplyDivide', n=remapControllerLocNormalize)
+        cmds.connectAttr(remapControllerLoc + '.translate', remapControllerLocNormalize + '.input1')
+        cmds.connectAttr('MB_Count_V.output', remapControllerLocNormalize + '.input2')
+        cmds.setAttr(remapControllerLocNormalize + '.operation', 2)
         xValue = iindex / totalLocator / 2 + 0.5
-        cmds.setAttr(f'{remapControllerLoc}.tx', iindex / (totalLocator - 1))
+        cmds.setAttr(f'{remapControllerLoc}.tx', iindex / (totalLocator - 1) * (totalIndex *2 +1) )
         cmds.setAttr(f'{remapControllerLoc}.ty', 0.0)
-        cmds.connectAttr(f'{remapControllerLoc}.translate', f'{remapNode}.locator[{iindex}]')
+        cmds.connectAttr(f'{remapControllerLocNormalize}.output', f'{remapNode}.locator[{iindex}]')
         cmds.parent(remapControllerLoc, fence)
         cmds.setAttr(f'{remapControllerLoc}.tz', lock=True)
         cmds.setAttr(f'{remapControllerLoc}.rx', keyable=False)
@@ -760,13 +845,16 @@ def createRemap(totalIndex, ID, totalLocator):
         cmds.setAttr(f'{remapControllerLoc}.maxTransXLimitEnable', True)
         cmds.setAttr(f'{remapControllerLoc}.minTransYLimitEnable', True)
         cmds.setAttr(f'{remapControllerLoc}.maxTransYLimitEnable', True)
+
+        cmds.setAttr(f'{remapControllerLoc}.maxTransXLimit', totalIndex * 2 + 1)
         if iindex == 0:
             cmds.setAttr(f'{remapControllerLoc}.minTransXLimit', 0)
         else:
-
             cmds.connectAttr(f'{foreRemapControllerLoc}.tx', f'{remapControllerLoc}.minTransXLimit')
 
         cmds.setAttr(f'{remapControllerLoc}.minTransYLimit', 0)
+        cmds.setAttr(f'{remapControllerLoc}.maxTransYLimit', totalIndex*2+1)
+
         cmds.connectAttr(f'{remapControllerLoc}.translate', f'{crv}.controlPoints[{iindex}]')
     cmds.setAttr(f'{fence}.sx', 6)
     cmds.setAttr(f'{fence}.sy', 6)
@@ -779,6 +867,9 @@ def createRemap(totalIndex, ID, totalLocator):
         cmds.setAttr(f'{fence}.tx', -18)
         cmds.setAttr(f'{fence}.ty', 7 * index)
 
+    cmds.setAttr(f'{fence}.scaleX', 1 / (totalIndex * 2 + 1)*5)
+    cmds.setAttr(f'{fence}.scaleY', 1 / (totalIndex * 2 + 1)*5)
+    cmds.setAttr(f'{fence}.scaleZ', 1 / (totalIndex * 2 + 1)*5)
 
 def conductRemap(ID, totalIndex, target):
     fence = f'MB_{ID}_Fence'
@@ -929,23 +1020,14 @@ def doubleSideShader(shaderName, BSDF, baseColor1, baseColor2, roughness1, rough
     cmds.setAttr(f'{texture1}.fileTextureName', metalness1, type='string')
     cmds.setAttr(f'{texture2}.fileTextureName', metalness2, type='string')
 
-#     try:
-#         roughnessf = float(roughness)
-#         cmds.setAttr(f'{shader}.specularRoughness', roughnessf)
-#     except:
-#         textureRoughnessName = shaderName+'_r'
-#         textureRoughness = cmds.shadingNode('file', name=textureRoughnessName, asTexture=True)
-#         cmds.connectAttr(f'{textureRoughness}.outAlpha',f'{shader}.specularRoughness')
-#         cmds.setAttr(f'{textureRoughness}.colorSpace', 'Raw', type='string')
-#         cmds.setAttr(f'{textureRoughness}.ignoreColorSpaceFileRules', True)
-#         cmds.setAttr(f'{textureRoughness}.alphaIsLuminance', True)
-#         cmds.setAttr(f'{textureRoughness}.fileTextureName', roughness, type='string')
-# doubleSideShader('shaderName', 'aiStandardSurface', r'sourceimages\MBTexture\001.jpg', r'sourceimages\MBTexture\002.jpg',
-#                  r'sourceimages\MBTexture\003.jpg', r'sourceimages\MBTexture\004.jpg',
-#                  r'sourceimages\MBTexture\005.jpg', r'sourceimages\MBTexture\006.jpg')
 
-def assignPageShader(totalIndex, path, BSDF, baseColorPrefix='', baseColorSuffix='',
+
+def assignPageShader(path, BSDF, baseColorPrefix='', baseColorSuffix='',
                      roughnessPrefix='', roughnessSuffix='',metalnessPrefix='', metalnessSuffix=''):
+
+    totalIndex = int((cmds.getAttr("MB_Count.output")-1)/2)
+
+
     for index in range(-totalIndex, totalIndex + 1):
         ID = indexToID(index)
         meshName = indexToMeshName(index)
@@ -958,19 +1040,17 @@ def assignPageShader(totalIndex, path, BSDF, baseColorPrefix='', baseColorSuffix
         roughnessFileCount = len(roughness_file_paths)
         metalnessFileCount = len(metalness_file_paths)
         if baseColorFileCount % 2 or roughnessFileCount % 2 or metalnessFileCount % 2:
-            cmds.error('Certaini File count is odd number')
+            cmds.error('images must present in pairs. The count should be even.')
             return
-        if baseColorFileCount == 0 or roughnessFileCount == 0 or metalnessFileCount == 0:
-            cmds.error('Certain Texture file is blank')
+        if baseColorFileCount == 0:
+            cmds.error('Missing BaseColor texture')
             return
-        # if lIndex < fileCount / 2:
-        #     filePath1 = file_paths[lIndex * 2]
-        #     filePath2 = file_paths[lIndex * 2 + 1]
-        #     doubleSideShader(shaderID, BSDF, filePath1, filePath2, roughness)
-        #     cmds.select(meshName)
-        #     cmds.hyperShade(shaderID, assign=shaderID)
-        # else:
-        #     shaderID = IDToShaderID(indexToID(int(fileCount / 2 - totalIndex - 1)))
+        if roughnessFileCount == 0:
+            cmds.error('Missing Roughness texture')
+            return
+        if metalnessFileCount == 0:
+            cmds.error('Missing Metalness texture')
+            return
 
         colorPath0 = baseColor_file_paths[min(lIndex * 2,baseColorFileCount-2)]
         colorPath1 = baseColor_file_paths[min(lIndex * 2 + 1,baseColorFileCount-1)]
@@ -992,7 +1072,10 @@ def MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMidd
     BSIDs = totalBSsToBSIDs(totalBSs)
     remapID = 'cmpt'
     createMBShader(shaderColorList)
+    # 创建层级
     createRigTree()
+    # 获取totalIndex
+    createCountNode(totalIndex)
 
     # 创建引导
     createGuides(width, height, subDivWidth, subDivHeight, cvsMaxIndex)
@@ -1016,7 +1099,7 @@ def MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMidd
         createCmptCore(iindex, totalIndex, totalMiddles, cvsMaxIndex)
 
     # 创建书脊
-    createBookSpineCurve()
+    createBookSpineCurve(height)
 
     # 循环 创建点在线上，偏移书页
     for iindex in range(-totalIndex, totalIndex + 1):
