@@ -766,11 +766,11 @@ def createBookSpineCurve(height):
 
     # 使用cmds.loft命令创建几何体
     splineNURBSFace = cmds.loft('MB_BookSpine_Curve2', 'MB_BookSpine_Curve1',ch=True,rn=True, ar=True,n='splineNURBSFace')
-    cmds.parent('splineNURBSFace','BookSpine')
+    cmds.parent('splineNURBSFace','PageGeo')
     cmds.hide(splineNURBSFace)
     # cmds.select(splineNURBSFace, replace=True)
     splinePoly = cmds.nurbsToPoly('splineNURBSFace',ch=1,n='splinePoly')
-    cmds.parent('splinePoly', 'BookSpine')
+    cmds.parent('splinePoly', 'PageGeo')
     tesA = cmds.listConnections('splinePolyShape', source=True, destination=False, plugs=False)
     tes = tesA[0]
     cmds.setAttr(f'{tes}.format',2)
@@ -1119,9 +1119,12 @@ def MBRig(totalIndex,width,height,subDivWidth,subDivHeight,cvsMaxIndex,totalMidd
         createRemap(totalIndex, BSID, totalBSRemapLocator)
         conductRemap(BSID, totalIndex, BSID)
 
+# def DSShader():
+
+
 # if __name__ == '__main__':
 #     # 定义参数
-#     totalIndex = 10
+#     totalIndex =  10
 #     width = 10
 #     height = 15
 #     subDivWidth = 7
